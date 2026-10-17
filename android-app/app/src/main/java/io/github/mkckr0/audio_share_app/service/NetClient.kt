@@ -122,7 +122,7 @@ class NetClient(val context: Context) {
             }
 
             _callback?.launch {
-                log("TCP connected")
+                log(context.getString(R.string.label_tcp_connected))
             }
 
             val tcpReadChannel = tcpSocket.openReadChannel()
@@ -140,7 +140,7 @@ class NetClient(val context: Context) {
             }?.join()   // wait AudioTrack created
 
             _callback?.launch {
-                log("get format success")
+                log(context.getString(R.string.label_format_received))
             }
 
             // start play
@@ -169,7 +169,7 @@ class NetClient(val context: Context) {
                 while (true) {
                     Log.d(tag, "check heartbeat")
                     if (TimeSource.Monotonic.markNow() - _heartbeatLastTick > 5.seconds) {
-                        throw Exception("heartbeat timeout")
+                        throw Exception(context.getString(R.string.label_heartbeat_timeout))
                     }
                     delay(3.seconds)
                 }

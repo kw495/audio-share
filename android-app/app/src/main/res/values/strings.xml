@@ -58,4 +58,10 @@
     <string name="label_timeout">Connect timeout</string>
     <string name="label_unresolved_address">Unresolved address</string>
     <string name="label_connecting">Connecting</string>
+    <string name="label_tcp_connected">TCP connected</string>
+    <string name="label_format_received">Got audio format</string>
+    <string name="label_heartbeat_timeout">Heartbeat timeout</string>
+    <!-- Dialogs -->
+    <string name="label_cancel">Cancel</string>
+    <string name="label_apply">Apply</string>
 </resources>

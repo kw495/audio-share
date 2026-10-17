@@ -92,7 +92,7 @@ class UpdateWorker(appContext: Context, workerParams: WorkerParameters) : Worker
                             Manifest.permission.POST_NOTIFICATIONS
                         ) != PackageManager.PERMISSION_GRANTED
                     ) {
-                        showMessage("No permission to post notification")
+                        showMessage(applicationContext.getString(R.string.label_no_post_notification_permission))
                         return@with
                     }
 

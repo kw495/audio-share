@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.mkckr0.audio_share_app.R
 import io.github.mkckr0.audio_share_app.model.appSettingsDataStore
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -90,7 +91,7 @@ private fun <IconSrc> BaseEditTextPreference(
                 TextButton(
                     onClick = { showDialog = false }
                 ) {
-                    Text("Cancel")
+                    Text(context.getString(R.string.label_cancel))
                 }
             },
             confirmButton = {
@@ -107,7 +108,7 @@ private fun <IconSrc> BaseEditTextPreference(
                         }
                     }
                 ) {
-                    Text("Apply")
+                    Text(context.getString(R.string.label_apply))
                 }
             },
         )

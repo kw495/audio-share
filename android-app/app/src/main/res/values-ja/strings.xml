@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Main Screen -->
+    <string name="label_home">ホーム</string>
+    <string name="label_audio">音声</string>
+    <string name="label_settings">設定</string>
+    <!-- Home Screen -->
+    <string name="label_host">ホスト</string>
+    <string name="label_port">ポート</string>
+    <!-- Audio Screen -->
+    <string name="label_audio_track">オーディオトラック</string>
+    <string name="label_volume_linear_gain">音量（リニアゲイン）</string>
+    <string name="label_buffer_scale">バッファ倍率（最小バッファサイズの倍数）</string>
+    <string name="label_audio_usage">出力先</string>
+    <string name="label_audio_usage_summary">次の接続から反映されます</string>
+    <string name="label_audio_usage_media">メディア</string>
+    <string name="label_audio_usage_alarm">アラーム</string>
+    <string name="label_audio_usage_notification">通知</string>
+    <string name="label_audio_usage_ringtone">着信音</string>
+    <string name="label_audio_effect">音声エフェクト</string>
+    <string name="label_loudness_enhancer">ラウドネス強調</string>
+    <!-- Settings Screen -->
+    <string name="label_auto_start">自動開始</string>
+    <string name="label_auto_start_when_system_boots">端末の起動時に再生を開始</string>
+    <string name="label_auto_start_when_app_starts">アプリの起動時に再生を開始</string>
+    <string name="label_ignored">除外済み</string>
+    <string name="label_not_ignored">除外されていません</string>
+    <string name="label_battery_optimization">バッテリーの最適化</string>
+    <string name="label_request_battery_optimization">バッテリーの最適化からの除外をリクエスト</string>
+    <string name="label_battery_optimization_settings">バッテリーの最適化の設定</string>
+    <string name="label_appearance">外観</string>
+    <string name="label_language">言語</string>
+    <string name="label_dynamic_color_from_wallpaper">壁紙から配色</string>
+    <string name="label_dynamic_color_from_seed_color">基準色から配色</string>
+    <string name="label_color_is_invalid">色の指定が正しくありません</string>
+    <string name="label_notification">通知</string>
+    <string name="label_notification_settings">通知の設定</string>
+    <string name="label_update">アップデート</string>
+    <string name="label_auto_check_for_update">アップデートを自動で確認</string>
+    <string name="label_check_for_update">アップデートを確認</string>
+    <string name="label_latest_release">最新リリース</string>
+    <string name="label_about">このアプリについて</string>
+    <string name="label_issues">問題の報告</string>
+    <string name="label_report_a_bug">不具合の報告や機能の要望</string>
+    <string name="label_version">バージョン</string>
+    <!-- Update Worker -->
+    <string name="label_no_update">アップデートはありません</string>
+    <string name="label_has_an_update_1">アップデートがありますが、APK がありません</string>
+    <string name="label_has_an_update_2">新しいバージョン（%s）</string>
+    <string name="label_no_post_notification_permission">通知を表示する権限がありません</string>
+    <string name="label_tap_notification_1">この通知をタップするとダウンロードを開始します</string>
+    <string name="label_tap_notification_2">アップデートがあります。通知をタップしてダウンロードしてください</string>
+    <!-- Audio Player -->
+    <string name="label_started">再生中</string>
+    <string name="label_stopped">停止</string>
+    <string name="label_paused">一時停止</string>
+    <string name="label_retry">%d 秒後に再試行します</string>
+    <string name="label_timeout">接続がタイムアウトしました</string>
+    <string name="label_unresolved_address">アドレスを解決できません</string>
+    <string name="label_connecting">接続中</string>
+    <string name="label_tcp_connected">TCP 接続しました</string>
+    <string name="label_format_received">音声形式を取得しました</string>
+    <string name="label_heartbeat_timeout">応答がありません</string>
+    <!-- Dialogs -->
+    <string name="label_cancel">キャンセル</string>
+    <string name="label_apply">適用</string>
+</resources>
