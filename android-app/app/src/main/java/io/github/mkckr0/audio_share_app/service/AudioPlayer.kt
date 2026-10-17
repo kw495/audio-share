@@ -41,6 +41,7 @@ import com.google.common.util.concurrent.Futures.immediateVoidFuture
 import com.google.common.util.concurrent.ListenableFuture
 import io.github.mkckr0.audio_share_app.R
 import io.github.mkckr0.audio_share_app.model.AudioConfigKeys
+import io.github.mkckr0.audio_share_app.model.AudioUsageValues
 import io.github.mkckr0.audio_share_app.model.NetworkConfigKeys
 import io.github.mkckr0.audio_share_app.model.audioConfigDataStore
 import io.github.mkckr0.audio_share_app.model.getFloat
@@ -93,6 +94,9 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
 
     private var _loudnessEnhancer: LoudnessEnhancer? = null
     private val loudnessEnhancer get() = _loudnessEnhancer!!
+
+    // Only set while the server sends Opus.
+    private var opusDecoder: OpusDecoder? = null
 
     private val scope: CoroutineScope = MainScope()
     private val retryScope: CoroutineScope = MainScope()
@@ -172,6 +176,8 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
             release()
         }
         _loudnessEnhancer = null
+        opusDecoder?.release()
+        opusDecoder = null
         _audioTrack?.run {
             pause()
             flush()
@@ -200,6 +206,8 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
         private var prefillDuration: Duration = 0.milliseconds
         // Starts playback anyway if a short sound ends before the prefill target is reached.
         private var prefillTimeoutJob: Job? = null
+        // Collects Opus output that the codec finishes after decode() returned.
+        private var drainJob: Job? = null
 
         private fun startPlaybackAfterPrefill() {
             prefillTimeoutJob?.cancel()
@@ -231,6 +239,9 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                 } else {
                     AudioFormat.ENCODING_INVALID
                 }
+
+                // decoded to 16-bit PCM by OpusDecoder
+                Client.AudioFormat.Encoding.ENCODING_OPUS -> AudioFormat.ENCODING_PCM_16BIT
 
                 else -> {
                     AudioFormat.ENCODING_INVALID
@@ -267,11 +278,41 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                 )).toInt()
             Log.i(tag, "buffer scale: $bufferScale")
 
+            val usageValue = audioConfig[stringPreferencesKey(AudioConfigKeys.AUDIO_USAGE)]
+                ?: context.getString(R.string.default_audio_usage)
+            val (usage, contentType) = when (usageValue) {
+                AudioUsageValues.ALARM ->
+                    AudioAttributes.USAGE_ALARM to AudioAttributes.CONTENT_TYPE_SONIFICATION
+                AudioUsageValues.NOTIFICATION ->
+                    AudioAttributes.USAGE_NOTIFICATION to AudioAttributes.CONTENT_TYPE_SONIFICATION
+                AudioUsageValues.RINGTONE ->
+                    AudioAttributes.USAGE_NOTIFICATION_RINGTONE to AudioAttributes.CONTENT_TYPE_SONIFICATION
+                else ->
+                    AudioAttributes.USAGE_MEDIA to AudioAttributes.CONTENT_TYPE_MUSIC
+            }
+            Log.i(tag, "audio usage: $usageValue")
+
+            // A reconnect builds a new track (possibly with a different usage); drop the old one.
+            _loudnessEnhancer?.release()
+            _loudnessEnhancer = null
+            _audioTrack?.run {
+                pause()
+                flush()
+                release()
+            }
+            drainJob?.cancel()
+            opusDecoder?.release()
+            opusDecoder = if (format.encoding == Client.AudioFormat.Encoding.ENCODING_OPUS) {
+                OpusDecoder(format.sampleRate, format.channels)
+            } else {
+                null
+            }
+
             _audioTrack = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(usage)
+                        .setContentType(contentType)
                         .build()
                 )
                 .setAudioFormat(
@@ -341,11 +382,29 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                 Log.d(tag, "audio resumed after ${now - last}, prebuffering")
                 audioTrack.pause()
                 audioTrack.flush()
+                opusDecoder?.flush()
                 prebuffering = true
                 queuedBytes = 0
             }
             lastDataMark = now
 
+            val decoder = opusDecoder
+            if (decoder == null) {
+                writePcm(audioData)
+                return
+            }
+            decoder.decode(audioData, ::writePcm)
+            drainJob?.cancel()
+            drainJob = scope.launch {
+                // Packets arrive every 20ms; this covers the last one before a pause.
+                repeat(4) {
+                    delay(5.milliseconds)
+                    decoder.drain(::writePcm)
+                }
+            }
+        }
+
+        private fun writePcm(audioData: ByteBuffer) {
             // While paused, writes are queued in the track's buffer.
             val written = audioTrack.write(audioData, audioData.remaining(), AudioTrack.WRITE_NON_BLOCKING)
 

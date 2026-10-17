@@ -27,7 +27,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.mkckr0.audio_share_app.R
 import io.github.mkckr0.audio_share_app.model.AudioConfigKeys
+import io.github.mkckr0.audio_share_app.model.AudioUsageValues
 import io.github.mkckr0.audio_share_app.model.getFloat
+import io.github.mkckr0.audio_share_app.ui.base.ChoiceConfig
 import io.github.mkckr0.audio_share_app.ui.base.ConfigGroup
 import io.github.mkckr0.audio_share_app.ui.base.SliderConfig
 import io.github.mkckr0.audio_share_app.ui.theme.AppTheme
@@ -40,6 +42,18 @@ fun AudioScreen() {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         ConfigGroup(context.getString(R.string.label_audio_track)) {
+            ChoiceConfig(
+                key = AudioConfigKeys.AUDIO_USAGE,
+                title = context.getString(R.string.label_audio_usage),
+                summary = context.getString(R.string.label_audio_usage_summary),
+                options = listOf(
+                    AudioUsageValues.MEDIA to context.getString(R.string.label_audio_usage_media),
+                    AudioUsageValues.ALARM to context.getString(R.string.label_audio_usage_alarm),
+                    AudioUsageValues.NOTIFICATION to context.getString(R.string.label_audio_usage_notification),
+                    AudioUsageValues.RINGTONE to context.getString(R.string.label_audio_usage_ringtone),
+                ),
+                defaultValue = context.getString(R.string.default_audio_usage),
+            )
             SliderConfig(
                 key = AudioConfigKeys.VOLUME,
                 title = context.getString(R.string.label_volume_linear_gain),

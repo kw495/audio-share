@@ -25,6 +25,19 @@ object AudioConfigKeys {
     const val VOLUME = "volume"
     const val BUFFER_SCALE = "buffer_scale"
     const val LOUDNESS_ENHANCER = "loudness_enhancer"
+    const val AUDIO_USAGE = "audio_usage"
+}
+
+/**
+ * Where playback is routed. The value decides which volume slider, and which
+ * silent/do-not-disturb rules, apply to the stream. AudioTrack cannot change its
+ * usage once built, so a change only takes effect on the next connection.
+ */
+object AudioUsageValues {
+    const val MEDIA = "media"
+    const val ALARM = "alarm"
+    const val NOTIFICATION = "notification"
+    const val RINGTONE = "ringtone"
 }
 
 object AppSettingsKeys {

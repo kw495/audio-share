@@ -11,6 +11,12 @@
     <string name="label_audio_track">Audio Track</string>
     <string name="label_volume_linear_gain">Volume(Linear Gain)</string>
     <string name="label_buffer_scale">Buffer Scale(Multiple of MinBufferSize)</string>
+    <string name="label_audio_usage">Output</string>
+    <string name="label_audio_usage_summary">Applied on the next connection</string>
+    <string name="label_audio_usage_media">Media</string>
+    <string name="label_audio_usage_alarm">Alarm</string>
+    <string name="label_audio_usage_notification">Notification</string>
+    <string name="label_audio_usage_ringtone">Ringtone</string>
     <string name="label_audio_effect">Audio Effect</string>
     <string name="label_loudness_enhancer">Loudness Enhancer</string>
     <!-- Settings Screen -->
