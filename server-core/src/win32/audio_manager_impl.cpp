@@ -152,43 +152,10 @@ void audio_manager::do_loopback_recording(std::shared_ptr<network_manager> netwo
     if (config.encoding == encoding_t::encoding_invalid) {
         spdlog::error("invalid encoding");
         return;
-    } else if (config.encoding != encoding_t::encoding_default) {
-        if (pCaptureFormat->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
-            ((PWAVEFORMATEXTENSIBLE)pCaptureFormat.get())->SubFormat = config.encoding == encoding_t::encoding_f32 ? KSDATAFORMAT_SUBTYPE_IEEE_FLOAT : KSDATAFORMAT_SUBTYPE_PCM;
-        } else {
-            pCaptureFormat->wFormatTag = config.encoding == encoding_t::encoding_f32 ? WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
-        }
-        switch (config.encoding) {
-        case encoding_t::encoding_f32:
-            pCaptureFormat->wBitsPerSample = 32;
-            break;
-        case encoding_t::encoding_s8:
-            pCaptureFormat->wBitsPerSample = 8;
-            break;
-        case encoding_t::encoding_s16:
-            pCaptureFormat->wBitsPerSample = 16;
-            break;
-        case encoding_t::encoding_s24:
-            pCaptureFormat->wBitsPerSample = 24;
-            break;
-        case encoding_t::encoding_s32:
-            pCaptureFormat->wBitsPerSample = 32;
-            break;
-        default:
-            break;
-        }
-        if (pCaptureFormat->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
-            ((PWAVEFORMATEXTENSIBLE)pCaptureFormat.get())->Samples.wValidBitsPerSample = pCaptureFormat->wBitsPerSample;
-        }
     }
-    if (config.channels) {
-        pCaptureFormat->nChannels = config.channels;
-    }
-    pCaptureFormat->nBlockAlign = pCaptureFormat->wBitsPerSample * pCaptureFormat->nChannels / 8;
-    if (config.sample_rate) {
-        pCaptureFormat->nSamplesPerSec = config.sample_rate;
-    }
-    pCaptureFormat->nAvgBytesPerSec = pCaptureFormat->nSamplesPerSec * pCaptureFormat->nBlockAlign;
+    // Loopback capture only delivers the mix format (other channel counts or
+    // rates are ignored or refused), so it is captured as is and the requested
+    // encoding, channels and sample rate are produced by network_manager.
 
     spdlog::info("request capture format:\n{}", *pCaptureFormat);
 

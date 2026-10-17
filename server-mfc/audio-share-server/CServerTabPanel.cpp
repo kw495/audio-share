@@ -141,6 +141,7 @@ void CServerTabPanel::OnBnClickedButtonReset()
             { encoding_t::encoding_s16, L"16 bit integer PCM" },
             { encoding_t::encoding_s24, L"24 bit integer PCM" },
             { encoding_t::encoding_s32, L"32 bit integer PCM" },
+            { encoding_t::encoding_opus, L"Opus (compressed)" },
         };
         for (auto&& [encoding, name] : array) {
             auto nIndex = m_comboEncoding.AddString(name.c_str());

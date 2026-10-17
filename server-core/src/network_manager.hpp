@@ -27,6 +27,8 @@
 #include <asio/use_awaitable.hpp>
 
 #include "audio_manager.hpp"
+#include "opus_packer.hpp"
+#include "pcm_converter.hpp"
 
 class network_manager : public std::enable_shared_from_this<network_manager>
 {
@@ -78,19 +80,32 @@ private:
     void fill_udp_peer(int id, asio::ip::udp::endpoint udp_peer);
 
 public:
-    // `known_silent` passes the capture API's own silence flag through to the silence gate.
+    // Takes one packet in the capture format; it is converted, gated and
+    // encoded before sending. `known_silent` passes the capture API's own
+    // silence flag through.
     void broadcast_audio_data(const char* data, size_t count, int block_align, bool known_silent = false);
+
+    // The format clients receive, derived from the capture format and the config.
+    static audio_manager::AudioFormat wire_format(const audio_manager::AudioFormat& capture, const audio_manager::capture_config& config);
 
     std::shared_ptr<asio::io_context> _ioc;
 
 private:
+    void setup_pipeline();
     void send_audio_data(const uint8_t* data, size_t count, int block_align);
+    void send_packets(const opus_packer::packet_list& packets);
 
     std::shared_ptr<audio_manager> _audio_manager;
+    audio_manager::capture_config _capture_config;
     // Only touched from the capture thread (the caller of broadcast_audio_data).
-    silence_gate::config _gate_config;
-    silence_gate _gate;
-    bool _gate_ready = false;
+    bool _pipeline_ready = false;
+    pcm_converter _converter;
+    silence_gate _gate; // works on the converted float audio
+    bool _use_opus = false;
+    opus_packer _opus;
+    silence_gate::sample_format _wire_sample_format = silence_gate::sample_format::f32;
+    int _wire_block_align = 4;
+    std::vector<uint8_t> _wire_bytes;
     std::thread _net_thread;
     std::unique_ptr<udp_socket> _udp_server;
     playing_peer_list_t _playing_peer_list;

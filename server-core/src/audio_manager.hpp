@@ -47,6 +47,7 @@ public:
         encoding_s16 = 4,
         encoding_s24 = 5,
         encoding_s32 = 6,
+        encoding_opus = 7,
     };
 
     friend std::istream& operator>>(std::istream& is, encoding_t& e) {
@@ -64,17 +65,23 @@ public:
             e = encoding_t::encoding_s24;
         } else if (s == "s32") {
             e = encoding_t::encoding_s32;
+        } else if (s == "opus") {
+            e = encoding_t::encoding_opus;
         } else {
             e = encoding_t::encoding_invalid;
         }
         return is;
     }
 
+    // `encoding`, `channels` and `sample_rate` describe the audio sent to clients.
+    // On Windows the device is always captured in its mix format and converted
+    // afterwards (see pcm_converter.hpp).
     struct capture_config {
         std::string endpoint_id;
         encoding_t encoding = encoding_t::encoding_default;
         int channels = 0;
         int sample_rate = 0;
+        int opus_bitrate = 32000; // bits per second, only used with encoding_opus
         silence_gate::config gate; // skip sending while the captured audio is silent
     };
 

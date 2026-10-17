@@ -148,8 +148,8 @@ std::string network_manager::select_default_address(const std::vector<std::strin
 void network_manager::start_server(const std::string& host, uint16_t port, const audio_manager::capture_config& capture_config)
 {
     _ioc = std::make_shared<asio::io_context>();
-    _gate_config = capture_config.gate;
-    _gate_ready = false;
+    _capture_config = capture_config;
+    _pipeline_ready = false;
     {
         ip::tcp::endpoint endpoint { ip::make_address(host), port };
 
@@ -219,7 +219,7 @@ asio::awaitable<void> network_manager::read_loop(std::shared_ptr<tcp_socket> pee
         spdlog::trace("cmd {}", (uint32_t)cmd);
 
         if (cmd == cmd_t::cmd_get_format) {
-            auto format = _audio_manager->get_format_binary();
+            auto format = wire_format(*_audio_manager->get_format(), _capture_config).SerializeAsString();
             auto size = (uint32_t)format.size();
             std::array<asio::const_buffer, 3> buffers = {
                 asio::buffer(&cmd, sizeof(cmd)),
@@ -395,6 +395,118 @@ void network_manager::fill_udp_peer(int id, asio::ip::udp::endpoint udp_peer)
     spdlog::info("{} fill udp peer id:{} tcp://{} udp://{}", __func__, id, it->first->remote_endpoint(), udp_peer);
 }
 
+static silence_gate::sample_format to_sample_format(audio_manager::AudioFormat::Encoding encoding)
+{
+    using AudioFormat = audio_manager::AudioFormat;
+    switch (encoding) {
+    case AudioFormat::ENCODING_PCM_FLOAT:
+        return silence_gate::sample_format::f32;
+    case AudioFormat::ENCODING_PCM_8BIT:
+        return silence_gate::sample_format::u8;
+    case AudioFormat::ENCODING_PCM_16BIT:
+        return silence_gate::sample_format::s16;
+    case AudioFormat::ENCODING_PCM_24BIT:
+        return silence_gate::sample_format::s24;
+    case AudioFormat::ENCODING_PCM_32BIT:
+        return silence_gate::sample_format::s32;
+    default:
+        return silence_gate::sample_format::unknown;
+    }
+}
+
+audio_manager::AudioFormat network_manager::wire_format(const audio_manager::AudioFormat& capture, const audio_manager::capture_config& config)
+{
+    using AudioFormat = audio_manager::AudioFormat;
+    using encoding_t = audio_manager::encoding_t;
+
+    AudioFormat out; // encoding stays ENCODING_INVALID until capture has started
+    if (capture.encoding() == AudioFormat::ENCODING_INVALID || capture.channels() <= 0 || capture.sample_rate() <= 0) {
+        return out;
+    }
+
+    // Only mono or the capture layout can be produced (see pcm_converter).
+    int channels = config.channels == 1 ? 1 : capture.channels();
+
+    if (config.encoding == encoding_t::encoding_opus) {
+        if (channels > 2) {
+            channels = 1; // multichannel Opus is not supported, fold down to mono
+        }
+        out.set_encoding(AudioFormat::ENCODING_OPUS);
+        out.set_channels(channels);
+        out.set_sample_rate(opus_packer::sample_rate);
+        return out;
+    }
+
+    switch (config.encoding) {
+    case encoding_t::encoding_f32:
+        out.set_encoding(AudioFormat::ENCODING_PCM_FLOAT);
+        break;
+    case encoding_t::encoding_s8:
+        out.set_encoding(AudioFormat::ENCODING_PCM_8BIT);
+        break;
+    case encoding_t::encoding_s16:
+        out.set_encoding(AudioFormat::ENCODING_PCM_16BIT);
+        break;
+    case encoding_t::encoding_s24:
+        out.set_encoding(AudioFormat::ENCODING_PCM_24BIT);
+        break;
+    case encoding_t::encoding_s32:
+        out.set_encoding(AudioFormat::ENCODING_PCM_32BIT);
+        break;
+    default:
+        out.set_encoding(capture.encoding());
+        break;
+    }
+    out.set_channels(channels);
+    out.set_sample_rate(config.sample_rate > 0 ? config.sample_rate : capture.sample_rate());
+    return out;
+}
+
+// The capture format is only known once recording has started, so the
+// pipeline is configured on the first packet.
+void network_manager::setup_pipeline()
+{
+    using AudioFormat = audio_manager::AudioFormat;
+    const AudioFormat capture = *_audio_manager->get_format();
+    const AudioFormat wire = wire_format(capture, _capture_config);
+    const auto capture_sample_format = to_sample_format(capture.encoding());
+
+    if (capture_sample_format == silence_gate::sample_format::unknown) {
+        spdlog::error("unsupported capture encoding {}, nothing will be sent", (int)capture.encoding());
+    }
+    if (_capture_config.channels > 1 && _capture_config.channels != capture.channels()) {
+        spdlog::warn("only mono or the capture layout ({} channels) can be sent, ignoring --channels={}",
+            capture.channels(), _capture_config.channels);
+    }
+
+    _converter.configure(capture_sample_format, capture.channels(), capture.sample_rate(), wire.channels(), wire.sample_rate());
+    _gate.configure(_capture_config.gate, silence_gate::sample_format::f32, wire.sample_rate(), (int)sizeof(float) * wire.channels());
+
+    _use_opus = wire.encoding() == AudioFormat::ENCODING_OPUS;
+    if (_use_opus) {
+        const int err = _opus.configure(wire.channels(), _capture_config.opus_bitrate);
+        if (err != OPUS_OK) {
+            spdlog::error("opus encoder: {}", opus_strerror(err));
+        }
+        spdlog::info("send format: opus, {} channel(s), {}Hz, {}kbps",
+            wire.channels(), wire.sample_rate(), _capture_config.opus_bitrate / 1000);
+    } else {
+        _wire_sample_format = to_sample_format(wire.encoding());
+        _wire_block_align = pcm_converter::bytes_per_sample(_wire_sample_format) * wire.channels();
+        spdlog::info("send format: {}, {} channel(s), {}Hz, {}kbps",
+            AudioFormat::Encoding_Name(wire.encoding()), wire.channels(), wire.sample_rate(),
+            (int64_t)wire.sample_rate() * _wire_block_align * 8 / 1000);
+    }
+
+    if (!_capture_config.gate.enabled) {
+        spdlog::info("silence gate: disabled");
+    } else {
+        spdlog::info("silence gate: threshold {}dBFS, hold {}ms, preroll {}ms",
+            _capture_config.gate.threshold_db, _capture_config.gate.hold_ms, _capture_config.gate.preroll_ms);
+    }
+    _pipeline_ready = true;
+}
+
 void network_manager::broadcast_audio_data(const char* data, size_t count, int block_align, bool known_silent)
 {
     if (count <= 0) {
@@ -402,52 +514,59 @@ void network_manager::broadcast_audio_data(const char* data, size_t count, int b
     }
     // spdlog::trace("broadcast_audio_data count: {}", count);
 
-    // The capture format is only known once recording has started, so the gate
-    // is configured on the first packet.
-    if (!_gate_ready) {
-        using AudioFormat = audio_manager::AudioFormat;
-        auto format = _audio_manager->get_format();
-        auto sample_format = silence_gate::sample_format::unknown;
-        switch (format->encoding()) {
-        case AudioFormat::ENCODING_PCM_FLOAT:
-            sample_format = silence_gate::sample_format::f32;
-            break;
-        case AudioFormat::ENCODING_PCM_8BIT:
-            sample_format = silence_gate::sample_format::u8;
-            break;
-        case AudioFormat::ENCODING_PCM_16BIT:
-            sample_format = silence_gate::sample_format::s16;
-            break;
-        case AudioFormat::ENCODING_PCM_24BIT:
-            sample_format = silence_gate::sample_format::s24;
-            break;
-        case AudioFormat::ENCODING_PCM_32BIT:
-            sample_format = silence_gate::sample_format::s32;
-            break;
-        default:
-            break;
-        }
-        _gate.configure(_gate_config, sample_format, format->sample_rate(), block_align);
-        _gate_ready = true;
-        if (!_gate_config.enabled) {
-            spdlog::info("silence gate: disabled");
-        } else if (sample_format == silence_gate::sample_format::unknown) {
-            spdlog::warn("silence gate: unknown sample format, sending everything");
-        } else {
-            spdlog::info("silence gate: threshold {}dBFS, hold {}ms, preroll {}ms",
-                _gate_config.threshold_db, _gate_config.hold_ms, _gate_config.preroll_ms);
-        }
+    if (!_pipeline_ready) {
+        setup_pipeline();
+    }
+
+    const auto& pcm = _converter.process((const uint8_t*)data, count, known_silent);
+    if (pcm.empty()) {
+        return;
     }
 
     const bool was_open = _gate.is_open();
-    const auto& out = _gate.process((const uint8_t*)data, count, known_silent);
-    if (_gate.is_open() != was_open) {
-        spdlog::debug("silence gate: {}", _gate.is_open() ? "open (sending)" : "closed (idle)");
+    const auto& gated = _gate.process((const uint8_t*)pcm.data(), pcm.size() * sizeof(float));
+    const bool opened = !was_open && _gate.is_open();
+    const bool closed = was_open && !_gate.is_open();
+    if (opened || closed) {
+        spdlog::debug("silence gate: {}", opened ? "open (sending)" : "closed (idle)");
     }
-    if (out.empty()) {
+
+    std::vector<float> samples(gated.size() / sizeof(float));
+    std::memcpy(samples.data(), gated.data(), samples.size() * sizeof(float));
+
+    if (_use_opus) {
+        if (opened) {
+            _opus.reset();
+        }
+        if (!samples.empty()) {
+            send_packets(_opus.push(samples.data(), samples.size()));
+        }
+        if (closed) {
+            send_packets(_opus.flush());
+        }
         return;
     }
-    send_audio_data(out.data(), out.size(), block_align);
+
+    if (samples.empty()) {
+        return;
+    }
+    pcm_converter::encode(samples.data(), samples.size(), _wire_sample_format, _wire_bytes);
+    send_audio_data(_wire_bytes.data(), _wire_bytes.size(), _wire_block_align);
+}
+
+void network_manager::send_packets(const opus_packer::packet_list& packets)
+{
+    if (packets.empty()) {
+        return;
+    }
+    auto list = std::make_shared<opus_packer::packet_list>(packets);
+    _ioc->post([list, self = shared_from_this()] {
+        for (const auto& packet : *list) {
+            for (auto& [peer, info] : self->_playing_peer_list) {
+                self->_udp_server->async_send_to(asio::buffer(packet), info->udp_peer, [list](const asio::error_code& ec, std::size_t bytes_transferred) { });
+            }
+        }
+    });
 }
 
 void network_manager::send_audio_data(const uint8_t* data, size_t count, int block_align)

@@ -124,6 +124,7 @@ void audio_manager::do_loopback_recording(std::shared_ptr<network_manager> netwo
     switch (config.encoding) {
     case encoding_t::encoding_default:
     case encoding_t::encoding_f32:
+    case encoding_t::encoding_opus: // encoded from float by network_manager
         spa_format = SPA_AUDIO_FORMAT_F32_LE;
         break;
     case encoding_t::encoding_s8:
@@ -147,7 +148,9 @@ void audio_manager::do_loopback_recording(std::shared_ptr<network_manager> netwo
         spa_channels = config.channels;
     }
     uint32_t spa_sample_rate = 0;
-    if (config.sample_rate) {
+    if (config.encoding == encoding_t::encoding_opus) {
+        spa_sample_rate = 48000; // Opus' own rate; lets PipeWire do the resampling
+    } else if (config.sample_rate) {
         spa_sample_rate = config.sample_rate;
     }
 

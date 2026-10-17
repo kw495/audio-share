@@ -27,6 +27,7 @@ message AudioFormat
       ENCODING_PCM_16BIT = 3;
       ENCODING_PCM_24BIT = 4;
       ENCODING_PCM_32BIT = 5;
+      ENCODING_OPUS = 6;        // one Opus packet per UDP datagram, always 48000Hz
    }
 
 	Encoding encoding = 1;

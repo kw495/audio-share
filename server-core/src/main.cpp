@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
     help_string += fmt::format("  {} -b\n", AUDIO_SHARE_BIN_NAME);
     help_string += fmt::format("  {} --bind={}\n", AUDIO_SHARE_BIN_NAME, default_address.empty() ? "192.168.3.2": default_address);
     help_string += fmt::format("  {} --bind={} --encoding=f32 --channels=2 --sample-rate=48000\n", AUDIO_SHARE_BIN_NAME, default_address.empty() ? "192.168.3.2": default_address);
+    help_string += fmt::format("  {} --bind={} --encoding=opus --channels=1 --opus-bitrate=32000\n", AUDIO_SHARE_BIN_NAME, default_address.empty() ? "192.168.3.2": default_address);
     help_string += fmt::format("  {} -l\n", AUDIO_SHARE_BIN_NAME);
     help_string += fmt::format("  {} --list-encoding\n", AUDIO_SHARE_BIN_NAME);
     cxxopts::Options options(AUDIO_SHARE_BIN_NAME, help_string);
@@ -26,10 +27,11 @@ int main(int argc, char* argv[])
         ("l,list-endpoint", "List available endpoints")
         ("b,bind", "The server bind address. If not set, will use default", cxxopts::value<string>()->implicit_value(default_address), "[host][:<port>]")
         ("e,endpoint", "Specify the endpoint id. If not set or set \"default\", will use default", cxxopts::value<string>()->default_value("default"), "[endpoint]")
-        ("encoding", "Specify the capture encoding. If not set or set \"default\", will use default", cxxopts::value<audio_manager::encoding_t>()->default_value("default"), "[encoding]")
+        ("encoding", "Specify the encoding sent to clients. If not set or set \"default\", will use the capture encoding", cxxopts::value<audio_manager::encoding_t>()->default_value("default"), "[encoding]")
         ("list-encoding", "List available encoding")
-        ("channels", "Specify the capture channels. If not set or set \"0\", will use default", cxxopts::value<int>()->default_value("0"), "[channels]")
-        ("sample-rate", "Specify the capture sample rate(Hz). If not set or set \"0\", will use default. The common values are 44100, 48000, etc.", cxxopts::value<int>()->default_value("0"), "[sample_rate]")
+        ("channels", "Specify the channels sent to clients: 1 (mono) or the capture channel count. If not set or set \"0\", will use the capture channels", cxxopts::value<int>()->default_value("0"), "[channels]")
+        ("sample-rate", "Specify the sample rate(Hz) sent to clients. If not set or set \"0\", will use the capture rate. The common values are 16000, 24000, 48000, etc. Ignored with opus (always 48000)", cxxopts::value<int>()->default_value("0"), "[sample_rate]")
+        ("opus-bitrate", "Opus bitrate in bits per second, only used with --encoding=opus", cxxopts::value<int>()->default_value("32000"), "[bps]")
         ("no-silence-gate", "Send audio continuously, even while it is silent")
         ("gate-threshold", "Peak level (dBFS) below which audio counts as silence and is not sent", cxxopts::value<double>()->default_value("-60"), "[dB]")
         ("gate-hold", "Keep sending this long (ms) after the last non-silent audio", cxxopts::value<int>()->default_value("500"), "[ms]")
@@ -76,6 +78,7 @@ int main(int argc, char* argv[])
                 { "s16", "16 bit integer PCM" },
                 { "s24", "24 bit integer PCM" },
                 { "s32", "32 bit integer PCM" },
+                { "opus", "Opus compressed audio, see --opus-bitrate" },
             };
             fmt::println("encoding list:");
             for(auto&& e : array) {
@@ -103,6 +106,8 @@ int main(int argc, char* argv[])
             capture_config.encoding = result["encoding"].as<audio_manager::encoding_t>();
             capture_config.channels = result["channels"].as<int>();
             capture_config.sample_rate = result["sample-rate"].as<int>();
+            // Opus accepts 6kbps..510kbps
+            capture_config.opus_bitrate = (std::clamp)(result["opus-bitrate"].as<int>(), 6000, 510000);
             capture_config.gate.enabled = result.count("no-silence-gate") == 0;
             capture_config.gate.threshold_db = result["gate-threshold"].as<double>();
             capture_config.gate.hold_ms = (std::max)(0, result["gate-hold"].as<int>());
