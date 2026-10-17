@@ -148,6 +148,8 @@ std::string network_manager::select_default_address(const std::vector<std::strin
 void network_manager::start_server(const std::string& host, uint16_t port, const audio_manager::capture_config& capture_config)
 {
     _ioc = std::make_shared<asio::io_context>();
+    _gate_config = capture_config.gate;
+    _gate_ready = false;
     {
         ip::tcp::endpoint endpoint { ip::make_address(host), port };
 
@@ -393,13 +395,63 @@ void network_manager::fill_udp_peer(int id, asio::ip::udp::endpoint udp_peer)
     spdlog::info("{} fill udp peer id:{} tcp://{} udp://{}", __func__, id, it->first->remote_endpoint(), udp_peer);
 }
 
-void network_manager::broadcast_audio_data(const char* data, size_t count, int block_align)
+void network_manager::broadcast_audio_data(const char* data, size_t count, int block_align, bool known_silent)
 {
     if (count <= 0) {
         return;
     }
     // spdlog::trace("broadcast_audio_data count: {}", count);
 
+    // The capture format is only known once recording has started, so the gate
+    // is configured on the first packet.
+    if (!_gate_ready) {
+        using AudioFormat = audio_manager::AudioFormat;
+        auto format = _audio_manager->get_format();
+        auto sample_format = silence_gate::sample_format::unknown;
+        switch (format->encoding()) {
+        case AudioFormat::ENCODING_PCM_FLOAT:
+            sample_format = silence_gate::sample_format::f32;
+            break;
+        case AudioFormat::ENCODING_PCM_8BIT:
+            sample_format = silence_gate::sample_format::u8;
+            break;
+        case AudioFormat::ENCODING_PCM_16BIT:
+            sample_format = silence_gate::sample_format::s16;
+            break;
+        case AudioFormat::ENCODING_PCM_24BIT:
+            sample_format = silence_gate::sample_format::s24;
+            break;
+        case AudioFormat::ENCODING_PCM_32BIT:
+            sample_format = silence_gate::sample_format::s32;
+            break;
+        default:
+            break;
+        }
+        _gate.configure(_gate_config, sample_format, format->sample_rate(), block_align);
+        _gate_ready = true;
+        if (!_gate_config.enabled) {
+            spdlog::info("silence gate: disabled");
+        } else if (sample_format == silence_gate::sample_format::unknown) {
+            spdlog::warn("silence gate: unknown sample format, sending everything");
+        } else {
+            spdlog::info("silence gate: threshold {}dBFS, hold {}ms, preroll {}ms",
+                _gate_config.threshold_db, _gate_config.hold_ms, _gate_config.preroll_ms);
+        }
+    }
+
+    const bool was_open = _gate.is_open();
+    const auto& out = _gate.process((const uint8_t*)data, count, known_silent);
+    if (_gate.is_open() != was_open) {
+        spdlog::debug("silence gate: {}", _gate.is_open() ? "open (sending)" : "closed (idle)");
+    }
+    if (out.empty()) {
+        return;
+    }
+    send_audio_data(out.data(), out.size(), block_align);
+}
+
+void network_manager::send_audio_data(const uint8_t* data, size_t count, int block_align)
+{
     // divide udp frame
     constexpr int mtu = 1492;
     int max_seg_size = mtu - 20 - 8;

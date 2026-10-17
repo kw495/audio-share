@@ -275,7 +275,9 @@ void audio_manager::do_loopback_recording(std::shared_ptr<network_manager> netwo
         int bytes_per_frame = pCaptureFormat->nBlockAlign;
         size_t count = numFramesAvailable * bytes_per_frame;
 
-        network_manager->broadcast_audio_data((const char*)pData, count, pCaptureFormat->nBlockAlign);
+        // With AUDCLNT_BUFFERFLAGS_SILENT the buffer must be treated as silence regardless of its contents.
+        const bool known_silent = (dwFlags & AUDCLNT_BUFFERFLAGS_SILENT) != 0;
+        network_manager->broadcast_audio_data((const char*)pData, count, pCaptureFormat->nBlockAlign, known_silent);
 
 #ifdef DEBUG
         frame_count += numFramesAvailable;

@@ -50,6 +50,7 @@ import io.github.mkckr0.audio_share_app.model.networkConfigDataStore
 import io.github.mkckr0.audio_share_app.pb.Client
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
@@ -59,7 +60,10 @@ import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import java.nio.ByteBuffer
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 @OptIn(UnstableApi::class)
 class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper()) {
@@ -183,6 +187,29 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
 
         override val scope: CoroutineScope = MainScope() + CoroutineName("NetClientCallbackScope")
 
+        // The server stops sending while the PC is silent. When audio resumes after
+        // such a gap the track's buffer is empty, so playing straight away would
+        // underrun on the next bit of network jitter. Instead the track is paused,
+        // refilled to `prefillBytes`, and only then played again.
+        // All of this runs on the main thread, like every other callback here.
+        private var prebuffering = true
+        private var queuedBytes = 0
+        private var prefillBytes = 0
+        private var gapThreshold: Duration = 300.milliseconds
+        private var lastDataMark: TimeSource.Monotonic.ValueTimeMark? = null
+        private var prefillDuration: Duration = 0.milliseconds
+        // Starts playback anyway if a short sound ends before the prefill target is reached.
+        private var prefillTimeoutJob: Job? = null
+
+        private fun startPlaybackAfterPrefill() {
+            prefillTimeoutJob?.cancel()
+            prefillTimeoutJob = null
+            if (prebuffering) {
+                audioTrack.play()
+                prebuffering = false
+            }
+        }
+
         override suspend fun log(message: String) {
 //            Log.d(tag, "logMessage: $message")
             AudioPlayer.message = message
@@ -273,7 +300,28 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                 loudnessEnhancer.setEnabled(true)
             }
 
-            audioTrack.play()
+            val bytesPerSample = when (encoding) {
+                AudioFormat.ENCODING_PCM_8BIT -> 1
+                AudioFormat.ENCODING_PCM_16BIT -> 2
+                AudioFormat.ENCODING_PCM_24BIT_PACKED -> 3
+                else -> 4 // float, 32-bit
+            }
+            val bytesPerFrame = bytesPerSample * format.channels
+            val bufferFrames = audioTrack.bufferSizeInFrames
+            // Half the track buffer, but at least 30ms so tiny buffers still absorb some jitter.
+            val prefillFrames = maxOf(bufferFrames / 2, format.sampleRate * 30 / 1000)
+                .coerceAtMost(bufferFrames)
+            prefillBytes = prefillFrames * bytesPerFrame
+            prefillDuration = (prefillFrames * 1000L / format.sampleRate).milliseconds
+            // A gap longer than the buffer means the track has drained.
+            val bufferDuration = (bufferFrames * 1000L / format.sampleRate).milliseconds
+            gapThreshold = maxOf(300.milliseconds, bufferDuration + 50.milliseconds)
+            Log.i(tag, "prefill: ${prefillFrames} frames, gap threshold: $gapThreshold")
+
+            // Playback starts once the first audio has been buffered (see onReceiveAudioData).
+            prebuffering = true
+            queuedBytes = 0
+            lastDataMark = null
         }
 
         override suspend fun onPlaybackStarted() {
@@ -287,7 +335,34 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
 
         override suspend fun onReceiveAudioData(audioData: ByteBuffer) {
 //            Log.d(tag, "${audioData.remaining()}")
-            audioTrack.write(audioData, audioData.remaining(), AudioTrack.WRITE_NON_BLOCKING)
+            val now = TimeSource.Monotonic.markNow()
+            val last = lastDataMark
+            if (!prebuffering && last != null && now - last > gapThreshold) {
+                Log.d(tag, "audio resumed after ${now - last}, prebuffering")
+                audioTrack.pause()
+                audioTrack.flush()
+                prebuffering = true
+                queuedBytes = 0
+            }
+            lastDataMark = now
+
+            // While paused, writes are queued in the track's buffer.
+            val written = audioTrack.write(audioData, audioData.remaining(), AudioTrack.WRITE_NON_BLOCKING)
+
+            if (prebuffering) {
+                if (written > 0) {
+                    queuedBytes += written
+                }
+                if (queuedBytes >= prefillBytes) {
+                    startPlaybackAfterPrefill()
+                } else if (prefillTimeoutJob == null && queuedBytes > 0) {
+                    prefillTimeoutJob = scope.launch {
+                        delay(prefillDuration + 100.milliseconds)
+                        prefillTimeoutJob = null
+                        startPlaybackAfterPrefill()
+                    }
+                }
+            }
         }
 
         override suspend fun onError(message: String?, cause: Throwable?) {

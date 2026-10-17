@@ -30,6 +30,7 @@
 #include <thread>
 
 #include "client.pb.h"
+#include "silence_gate.hpp"
 
 class network_manager;
 
@@ -74,6 +75,7 @@ public:
         encoding_t encoding = encoding_t::encoding_default;
         int channels = 0;
         int sample_rate = 0;
+        silence_gate::config gate; // skip sending while the captured audio is silent
     };
 
     audio_manager();
@@ -84,6 +86,7 @@ public:
     void do_loopback_recording(std::shared_ptr<network_manager> network_manager, const capture_config& config);
 
     std::string get_format_binary();
+    std::shared_ptr<AudioFormat> get_format() const { return _format; }
 
     endpoint_list_t get_endpoint_list();
 

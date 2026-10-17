@@ -78,12 +78,19 @@ private:
     void fill_udp_peer(int id, asio::ip::udp::endpoint udp_peer);
 
 public:
-    void broadcast_audio_data(const char* data, size_t count, int block_align);
-    
+    // `known_silent` passes the capture API's own silence flag through to the silence gate.
+    void broadcast_audio_data(const char* data, size_t count, int block_align, bool known_silent = false);
+
     std::shared_ptr<asio::io_context> _ioc;
 
 private:
+    void send_audio_data(const uint8_t* data, size_t count, int block_align);
+
     std::shared_ptr<audio_manager> _audio_manager;
+    // Only touched from the capture thread (the caller of broadcast_audio_data).
+    silence_gate::config _gate_config;
+    silence_gate _gate;
+    bool _gate_ready = false;
     std::thread _net_thread;
     std::unique_ptr<udp_socket> _udp_server;
     playing_peer_list_t _playing_peer_list;

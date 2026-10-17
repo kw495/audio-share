@@ -30,6 +30,10 @@ int main(int argc, char* argv[])
         ("list-encoding", "List available encoding")
         ("channels", "Specify the capture channels. If not set or set \"0\", will use default", cxxopts::value<int>()->default_value("0"), "[channels]")
         ("sample-rate", "Specify the capture sample rate(Hz). If not set or set \"0\", will use default. The common values are 44100, 48000, etc.", cxxopts::value<int>()->default_value("0"), "[sample_rate]")
+        ("no-silence-gate", "Send audio continuously, even while it is silent")
+        ("gate-threshold", "Peak level (dBFS) below which audio counts as silence and is not sent", cxxopts::value<double>()->default_value("-60"), "[dB]")
+        ("gate-hold", "Keep sending this long (ms) after the last non-silent audio", cxxopts::value<int>()->default_value("500"), "[ms]")
+        ("gate-preroll", "Audio (ms) sent ahead of the packet that ends a silence", cxxopts::value<int>()->default_value("20"), "[ms]")
         ("V,verbose", "Set log level to \"trace\"")
         ("v,version", "Show version")
         ;
@@ -99,6 +103,10 @@ int main(int argc, char* argv[])
             capture_config.encoding = result["encoding"].as<audio_manager::encoding_t>();
             capture_config.channels = result["channels"].as<int>();
             capture_config.sample_rate = result["sample-rate"].as<int>();
+            capture_config.gate.enabled = result.count("no-silence-gate") == 0;
+            capture_config.gate.threshold_db = result["gate-threshold"].as<double>();
+            capture_config.gate.hold_ms = (std::max)(0, result["gate-hold"].as<int>());
+            capture_config.gate.preroll_ms = (std::max)(0, result["gate-preroll"].as<int>());
 
             auto network_manager = std::make_shared<class network_manager>(audio_manager);
 
