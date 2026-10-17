@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
     help_string += fmt::format("  {} --bind={}\n", AUDIO_SHARE_BIN_NAME, default_address.empty() ? "192.168.3.2": default_address);
     help_string += fmt::format("  {} --bind={} --encoding=f32 --channels=2 --sample-rate=48000\n", AUDIO_SHARE_BIN_NAME, default_address.empty() ? "192.168.3.2": default_address);
     help_string += fmt::format("  {} --bind={} --encoding=opus --channels=1 --opus-bitrate=32000\n", AUDIO_SHARE_BIN_NAME, default_address.empty() ? "192.168.3.2": default_address);
+    help_string += fmt::format("  {} -b --test-tone=\"CQ TEST\" --encoding=opus\n", AUDIO_SHARE_BIN_NAME);
     help_string += fmt::format("  {} -l\n", AUDIO_SHARE_BIN_NAME);
     help_string += fmt::format("  {} --list-encoding\n", AUDIO_SHARE_BIN_NAME);
     cxxopts::Options options(AUDIO_SHARE_BIN_NAME, help_string);
@@ -32,6 +33,9 @@ int main(int argc, char* argv[])
         ("channels", "Specify the channels sent to clients: 1 (mono) or the capture channel count. If not set or set \"0\", will use the capture channels", cxxopts::value<int>()->default_value("0"), "[channels]")
         ("sample-rate", "Specify the sample rate(Hz) sent to clients. If not set or set \"0\", will use the capture rate. The common values are 16000, 24000, 48000, etc. Ignored with opus (always 48000)", cxxopts::value<int>()->default_value("0"), "[sample_rate]")
         ("opus-bitrate", "Opus bitrate in bits per second, only used with --encoding=opus", cxxopts::value<int>()->default_value("32000"), "[bps]")
+        ("test-tone", "Send a repeating Morse code test signal instead of capturing (no sound device needed)", cxxopts::value<string>()->implicit_value("TEST"), "[text]")
+        ("test-tone-wpm", "Morse speed in words per minute", cxxopts::value<int>()->default_value("20"), "[wpm]")
+        ("test-tone-freq", "Morse tone frequency in Hz", cxxopts::value<int>()->default_value("700"), "[Hz]")
         ("no-silence-gate", "Send audio continuously, even while it is silent")
         ("gate-threshold", "Peak level (dBFS) below which audio counts as silence and is not sent", cxxopts::value<double>()->default_value("-60"), "[dB]")
         ("gate-hold", "Keep sending this long (ms) after the last non-silent audio", cxxopts::value<int>()->default_value("500"), "[ms]")
@@ -103,6 +107,12 @@ int main(int argc, char* argv[])
             audio_manager::capture_config capture_config;
 
             capture_config.endpoint_id = result["endpoint"].as<string>();
+            if (result.count("test-tone")) {
+                capture_config.endpoint_id = audio_manager::test_tone_endpoint;
+                capture_config.test_tone.text = result["test-tone"].as<string>();
+            }
+            capture_config.test_tone.wpm = result["test-tone-wpm"].as<int>();
+            capture_config.test_tone.frequency = result["test-tone-freq"].as<int>();
             capture_config.encoding = result["encoding"].as<audio_manager::encoding_t>();
             capture_config.channels = result["channels"].as<int>();
             capture_config.sample_rate = result["sample-rate"].as<int>();

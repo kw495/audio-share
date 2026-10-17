@@ -445,9 +445,12 @@ static void print_endpoints(wil::com_ptr<IMMDeviceCollection>& pCollection)
 
 static void exit_on_failed(HRESULT hr, const char* message, const char* func)
 {
+    // Throws instead of exiting so the GUI survives, e.g. when there is no
+    // sound device; the capture thread decides what to do (see audio_manager.cpp).
     if (FAILED(hr)) {
-        spdlog::error("exit_on_failed hr={}, func={}, message={}, error={}", hr, func, message, str_win_err(HRESULT_CODE(hr)));
-        exit(-1);
+        auto what = fmt::format("hr=0x{:08X}, func={}, message={}, error={}", (uint32_t)hr, func, message, str_win_err(HRESULT_CODE(hr)));
+        spdlog::error("exit_on_failed {}", what);
+        throw std::runtime_error(what);
     }
 }
 

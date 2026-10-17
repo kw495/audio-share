@@ -20,6 +20,15 @@
 #define IDS_SUCCESS                     120
 #define IDS_NO_UPDATE                   121
 #define IDS_NEW_VERSION                 122
+#define IDS_JAPANESE                    140
+#define IDS_TEST_TONE                   141
+#define IDS_CAPTURE_FAILED              142
+#define IDS_ENCODING_F32                143
+#define IDS_ENCODING_S8                 144
+#define IDS_ENCODING_S16                145
+#define IDS_ENCODING_S24                146
+#define IDS_ENCODING_S32                147
+#define IDS_ENCODING_OPUS               148
 #define IDR_MAINFRAME                   128
 #define IDR_MENU_SYSTEM_TRAY            129
 #define IDB_BITMAP_APP                  130
@@ -32,6 +41,8 @@
 #define IDC_BUTTON_RESET                1104
 #define IDC_COMBO_ENCODING              1105
 #define IDC_BUTTON_SOUND_PANEL          1106
+#define IDC_EDIT_TEST_TONE_TEXT         1107
+#define IDC_STATIC_TEST_TONE_TEXT       1108
 #define IDC_CHECK_AUTORUN               1200
 #define IDC_BUTTON_REPPAIR_FIREWALL     1201
 #define IDC_RADIO_NONE                  1202

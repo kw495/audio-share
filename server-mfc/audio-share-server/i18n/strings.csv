@@ -1,51 +1,67 @@
-﻿language name,en-US,zh-CN
-primary language identifier,LANG_ENGLISH,LANG_CHINESE
-sublanguage identifier,SUBLANG_ENGLISH_US,SUBLANG_CHINESE_SIMPLIFIED
-comment,English (United States),"Chinese (Simplified, China)"
-#,#,#
-,Server Address,服务器地址
-,Host,主机
-,Port,端口
-,Capture,捕获
-,Audio Endpoint,音频端点
-,Start Server,启动服务器
-,Stop Server,关闭服务器
-,Action,动作
-,Reset,重置
-,Encoding,编码
-,Sound Panel,声音面板
-,Default,默认
-,No Audio Endpoint,没有音频端点
-,No Selected Audio Endpoint,没有选择音频端点
-#,#,#
-,Exit,退出
-,Hide,隐藏
-,About,关于
-,Behavior,行为
-,Auto run the app when system starts,当系统启动时自动运行应用
-,When app starts,当应用启动时
-,Do nothing,不做任何事
-,Start server,启动服务器
-,Keep last state,保持之前状态
-,When click close button,当点击关闭按钮时
-,Exit,退出
-,Minimize to system tray,最小化到系统栏
-,Firewall,防火墙
-,Repair Firewall,修复防火墙
-,Update,更新
-,Check for Update,检查更新
-,Auto check for update,自动检查更新
-,Appearance,外观
-,Language,语言
-#,#,#
-,Show,显示
-#,#,#
-,Server,服务器
-,App Settings,应用设置
-#,#,#
-,Success,成功
-,New Version,新版本
-,No Update,没有更新
-#,#,#
-,English,英语
-,Simplified Chinese,简体中文
+﻿language name,en-US,zh-CN,ja-JP
+primary language identifier,LANG_ENGLISH,LANG_CHINESE,LANG_JAPANESE
+sublanguage identifier,SUBLANG_ENGLISH_US,SUBLANG_CHINESE_SIMPLIFIED,SUBLANG_JAPANESE_JAPAN
+comment,English (United States),"Chinese (Simplified, China)",Japanese (Japan)
+#,#,#,#
+,Server Address,服务器地址,サーバーのアドレス
+,Host,主机,ホスト
+,Port,端口,ポート
+,Capture,捕获,キャプチャ
+,Audio Endpoint,音频端点,音声デバイス
+,Start Server,启动服务器,サーバー開始
+,Stop Server,关闭服务器,サーバー停止
+,Action,动作,操作
+,Reset,重置,リセット
+,Encoding,编码,エンコード
+,Sound Panel,声音面板,サウンド設定
+,Default,默认,既定
+,No Audio Endpoint,没有音频端点,音声デバイスがありません
+,No Selected Audio Endpoint,没有选择音频端点,音声デバイスが選択されていません
+,Morse Text,摩尔斯文本,モールス文字列
+#,#,#,#
+,Exit,退出,終了
+,Hide,隐藏,隠す
+,About,关于,バージョン情報
+,Behavior,行为,動作
+,Auto run the app when system starts,当系统启动时自动运行应用,Windows 起動時に自動実行
+,When app starts,当应用启动时,アプリ起動時
+,Do nothing,不做任何事,何もしない
+,Start server,启动服务器,サーバーを開始
+,Keep last state,保持之前状态,前回の状態を保つ
+,When click close button,当点击关闭按钮时,閉じるボタンを押したとき
+,Exit,退出,終了
+,Minimize to system tray,最小化到系统栏,通知領域に最小化
+,Firewall,防火墙,ファイアウォール
+,Repair Firewall,修复防火墙,ファイアウォール修復
+,Update,更新,更新
+,Check for Update,检查更新,更新を確認
+,Auto check for update,自动检查更新,自動で更新を確認
+,Appearance,外观,外観
+,Language,语言,言語
+#,#,#,#
+,Show,显示,表示
+#,#,#,#
+,Server,服务器,サーバー
+,App Settings,应用设置,アプリ設定
+#,#,#,#
+,Success,成功,成功
+,New Version,新版本,新しいバージョン
+,No Update,没有更新,更新はありません
+#,#,#,#
+,English,英语,英語
+,Simplified Chinese,简体中文,簡体字中国語
+,Japanese,日语,日本語
+#,#,#,#
+,Test Tone (Morse Code),测试音（摩尔斯电码）,テストトーン（モールス信号）
+,"Audio capture failed. The server has been stopped.",音频捕获失败，服务器已停止。,音声のキャプチャに失敗したため、サーバーを停止しました。
+,32 bit floating-point PCM,32 位浮点 PCM,32 ビット浮動小数点 PCM
+,8 bit integer PCM,8 位整数 PCM,8 ビット整数 PCM
+,16 bit integer PCM,16 位整数 PCM,16 ビット整数 PCM
+,24 bit integer PCM,24 位整数 PCM,24 ビット整数 PCM
+,32 bit integer PCM,32 位整数 PCM,32 ビット整数 PCM
+,Opus (compressed),Opus（压缩）,Opus（圧縮）
+#,#,#,#
+,About Audio Share Server,关于 Audio Share Server,Audio Share Server について
+,Home Page,主页,ホームページ
+,Version:,版本:,バージョン:
+,Segoe UI,Segoe UI,Yu Gothic UI

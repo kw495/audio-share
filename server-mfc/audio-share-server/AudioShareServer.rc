@@ -132,6 +132,8 @@ BEGIN
     RTEXT           "Encoding",IDC_STATIC,23,68,49,12,SS_CENTERIMAGE,WS_EX_TRANSPARENT
     COMBOBOX        IDC_COMBO_ENCODING,78,69,93,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Sound Panel",IDC_BUTTON_SOUND_PANEL,35,86,58,14
+    RTEXT           "Morse Text",IDC_STATIC_TEST_TONE_TEXT,98,86,62,12,SS_CENTERIMAGE,WS_EX_TRANSPARENT
+    EDITTEXT        IDC_EDIT_TEST_TONE_TEXT,164,87,111,12,ES_AUTOHSCROLL | ES_UPPERCASE,WS_EX_CLIENTEDGE
 END
 
 IDD_APP_SETTINGS DIALOGEX 0, 0, 290, 244
@@ -346,6 +348,15 @@ BEGIN
     IDS_SUCCESS             "Success"
     IDS_NO_UPDATE           "No Update"
     IDS_NEW_VERSION         "New Version"
+    IDS_JAPANESE            "Japanese"
+    IDS_TEST_TONE           "Test Tone (Morse Code)"
+    IDS_CAPTURE_FAILED      "Audio capture failed. The server has been stopped."
+    IDS_ENCODING_F32        "32 bit floating-point PCM"
+    IDS_ENCODING_S8         "8 bit integer PCM"
+    IDS_ENCODING_S16        "16 bit integer PCM"
+    IDS_ENCODING_S24        "24 bit integer PCM"
+    IDS_ENCODING_S32        "32 bit integer PCM"
+    IDS_ENCODING_OPUS       "Opus (compressed)"
 END
 
 #endif    // English (United States) resources

@@ -143,7 +143,7 @@
     <CustomBuildStep>
       <Message>generate i18n rc file</Message>
       <Inputs>$(ProjectDir)i18n\strings.csv;$(ProjectDir)AudioShareServer.rc;%(Inputs)</Inputs>
-      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;%(Outputs)</Outputs>
+      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;$(ProjectDir)i18n\AudioShareServer_ja-JP.rc;%(Outputs)</Outputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -179,7 +179,7 @@
     <CustomBuildStep>
       <Message>generate i18n rc file</Message>
       <Inputs>$(ProjectDir)i18n\strings.csv;$(ProjectDir)AudioShareServer.rc;%(Inputs)</Inputs>
-      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;%(Outputs)</Outputs>
+      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;$(ProjectDir)i18n\AudioShareServer_ja-JP.rc;%(Outputs)</Outputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -219,7 +219,7 @@
     <CustomBuildStep>
       <Message>generate i18n rc file</Message>
       <Inputs>$(ProjectDir)i18n\strings.csv;$(ProjectDir)AudioShareServer.rc;%(Inputs)</Inputs>
-      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;%(Outputs)</Outputs>
+      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;$(ProjectDir)i18n\AudioShareServer_ja-JP.rc;%(Outputs)</Outputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -259,7 +259,7 @@
     <CustomBuildStep>
       <Message>generate i18n rc file</Message>
       <Inputs>$(ProjectDir)i18n\strings.csv;$(ProjectDir)AudioShareServer.rc;%(Inputs)</Inputs>
-      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;%(Outputs)</Outputs>
+      <Outputs>$(ProjectDir)i18n\AudioShareServer_zh-CN.rc;$(ProjectDir)i18n\AudioShareServer_ja-JP.rc;%(Outputs)</Outputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -332,6 +332,12 @@
       <Culture Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">0x0804</Culture>
       <Culture Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">0x0804</Culture>
       <Culture Condition="'$(Configuration)|$(Platform)'=='Release|x64'">0x0804</Culture>
+    </ResourceCompile>
+    <ResourceCompile Include="i18n\AudioShareServer_ja-JP.rc">
+      <Culture Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">0x0411</Culture>
+      <Culture Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">0x0411</Culture>
+      <Culture Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">0x0411</Culture>
+      <Culture Condition="'$(Configuration)|$(Platform)'=='Release|x64'">0x0411</Culture>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,7 @@
 #include "audio_manager.hpp"
 #include "network_manager.hpp"
 #include "AudioShareServer.h"
+#include "AppMsg.h"
 
 // CServerTabPanel dialog
 
@@ -14,6 +15,7 @@ IMPLEMENT_DYNAMIC(CServerTabPanel, CTabPanel)
 
 CServerTabPanel::CServerTabPanel(CWnd* pParent)
     : CTabPanel(IDD_SERVER, IDS_SERVER, pParent)
+    , m_nDeviceCount(0)
     , m_bStarted(false)
 {
 }
@@ -42,6 +44,8 @@ void CServerTabPanel::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_BUTTON_RESET, m_buttonReset);
     DDX_Control(pDX, IDC_COMBO_ENCODING, m_comboEncoding);
     DDX_Control(pDX, IDC_BUTTON_SOUND_PANEL, m_buttonSoundPanel);
+    DDX_Control(pDX, IDC_EDIT_TEST_TONE_TEXT, m_editTestToneText);
+    DDX_Control(pDX, IDC_STATIC_TEST_TONE_TEXT, m_staticTestToneText);
 }
 
 
@@ -49,6 +53,8 @@ BEGIN_MESSAGE_MAP(CServerTabPanel, CTabPanel)
     ON_BN_CLICKED(IDC_BUTTON_SERVER, &CServerTabPanel::OnBnClickedStartServer)
     ON_BN_CLICKED(IDC_BUTTON_RESET, &CServerTabPanel::OnBnClickedButtonReset)
     ON_BN_CLICKED(IDC_BUTTON_SOUND_PANEL, &CServerTabPanel::OnBnClickedButtonSoundPanel)
+    ON_CBN_SELCHANGE(IDC_COMBO_AUDIO_ENDPOINT, &CServerTabPanel::OnCbnSelchangeComboAudioEndpoint)
+    ON_MESSAGE(WM_APP_CAPTURE_ERROR, &CServerTabPanel::OnCaptureError)
 END_MESSAGE_MAP()
 
 
@@ -60,13 +66,24 @@ BOOL CServerTabPanel::OnInitDialog()
 
     // TODO:  Add extra initialization here
     m_editPort.SetLimitText(5);
+    m_editTestToneText.SetLimitText(64);
+
+    // create network_manager (the endpoint list below needs audio_manager)
+    m_audio_manager = std::make_shared<audio_manager>();
+    m_network_manager = std::make_shared<network_manager>(m_audio_manager);
+
+    // A capture failure (e.g. no sound device) must not end the app: report it
+    // on the UI thread and stop the server there.
+    HWND hWnd = this->GetSafeHwnd();
+    m_audio_manager->on_capture_error = [hWnd](const std::string& what) {
+        auto pMessage = new CString(mbs_to_wchars(what).c_str());
+        if (!::PostMessageW(hWnd, WM_APP_CAPTURE_ERROR, 0, (LPARAM)pMessage)) {
+            delete pMessage;
+        }
+    };
 
     // init controls data
     this->OnBnClickedButtonReset();
-
-    // create network_manager
-    m_audio_manager = std::make_shared<audio_manager>();
-    m_network_manager = std::make_shared<network_manager>(m_audio_manager);
 
     auto nWhenAppStart = theApp.GetProfileIntW(L"App Settings", L"WhenAppStart", 0);
     if (nWhenAppStart == 1 || nWhenAppStart == 2 && theApp.GetProfileIntW(L"App", L"Running", false)) {
@@ -115,6 +132,13 @@ void CServerTabPanel::OnBnClickedButtonReset()
             int nIndex = m_comboBoxAudioEndpoint.AddString(mbs_to_wchars(name).c_str());
             m_comboBoxAudioEndpoint.SetItemDataPtr(nIndex, _wcsdup(mbs_to_wchars(id).c_str()));
         }
+        m_nDeviceCount = (int)endpoint_list.size();
+
+        // always available, even without any sound device
+        CString testToneString;
+        (void)testToneString.LoadStringW(IDS_TEST_TONE);
+        int nTestToneIndex = m_comboBoxAudioEndpoint.AddString(testToneString);
+        m_comboBoxAudioEndpoint.SetItemDataPtr(nTestToneIndex, _wcsdup(mbs_to_wchars(audio_manager::test_tone_endpoint).c_str()));
 
         auto configEndpoint = theApp.GetProfileStringW(L"Capture", L"endpoint", L"default");
         for (int nIndex = 0; nIndex < m_comboBoxAudioEndpoint.GetCount(); ++nIndex) {
@@ -128,23 +152,28 @@ void CServerTabPanel::OnBnClickedButtonReset()
             theApp.WriteProfileStringW(L"Capture", L"endpoint", L"default");
             m_comboBoxAudioEndpoint.SetCurSel(nDefaultIndex);
         }
+
+        m_editTestToneText.SetWindowTextW(theApp.GetProfileStringW(L"Capture", L"testToneText", L"TEST"));
+        OnCbnSelchangeComboAudioEndpoint();
     }
 
     // encoding list
     {
         m_comboEncoding.ResetContent();
         using encoding_t = audio_manager::encoding_t;
-        std::vector<std::pair<encoding_t, std::wstring>> array = {
-            { encoding_t::encoding_default, defaultString.GetString() },
-            { encoding_t::encoding_f32, L"32 bit floating-point PCM" },
-            { encoding_t::encoding_s8, L"8 bit integer PCM" },
-            { encoding_t::encoding_s16, L"16 bit integer PCM" },
-            { encoding_t::encoding_s24, L"24 bit integer PCM" },
-            { encoding_t::encoding_s32, L"32 bit integer PCM" },
-            { encoding_t::encoding_opus, L"Opus (compressed)" },
+        std::vector<std::pair<encoding_t, UINT>> array = {
+            { encoding_t::encoding_default, IDS_DEFAULT },
+            { encoding_t::encoding_f32, IDS_ENCODING_F32 },
+            { encoding_t::encoding_s8, IDS_ENCODING_S8 },
+            { encoding_t::encoding_s16, IDS_ENCODING_S16 },
+            { encoding_t::encoding_s24, IDS_ENCODING_S24 },
+            { encoding_t::encoding_s32, IDS_ENCODING_S32 },
+            { encoding_t::encoding_opus, IDS_ENCODING_OPUS },
         };
-        for (auto&& [encoding, name] : array) {
-            auto nIndex = m_comboEncoding.AddString(name.c_str());
+        for (auto&& [encoding, nID] : array) {
+            CString name;
+            (void)name.LoadStringW(nID);
+            auto nIndex = m_comboEncoding.AddString(name);
             m_comboEncoding.SetItemData(nIndex, (int)encoding);
         }
         
@@ -157,7 +186,7 @@ void CServerTabPanel::OnBnClickedButtonReset()
             }
         }
         if (m_comboEncoding.GetCurSel() == CB_ERR) {
-            theApp.WriteProfileInt(L"Capture", L"endpoint", (int)encoding_t::encoding_default);
+            theApp.WriteProfileInt(L"Capture", L"encoding", (int)encoding_t::encoding_default);
             m_comboEncoding.SetCurSel(0);
         }
     }
@@ -172,13 +201,14 @@ void CServerTabPanel::OnBnClickedStartServer()
     }
 
     if (!IsRunning()) {
-        if (m_comboBoxAudioEndpoint.GetCount() == 1) {
-            AfxMessageBox(IDS_NO_ENDPOINT, MB_OK | MB_ICONSTOP);
+        if (m_comboBoxAudioEndpoint.GetCurSel() == CB_ERR) {
+            AfxMessageBox(IDS_NO_SELECTED_ENDPOINT, MB_OK | MB_ICONSTOP);
             return;
         }
 
-        if (m_comboBoxAudioEndpoint.GetCurSel() == CB_ERR) {
-            AfxMessageBox(IDS_NO_SELECTED_ENDPOINT, MB_OK | MB_ICONSTOP);
+        // the test tone needs no sound device; everything else does
+        if (!IsTestToneSelected() && m_nDeviceCount == 0) {
+            AfxMessageBox(IDS_NO_ENDPOINT, MB_OK | MB_ICONSTOP);
             return;
         }
 
@@ -194,6 +224,9 @@ void CServerTabPanel::OnBnClickedStartServer()
         audio_manager::capture_config config;
         config.endpoint_id = wchars_to_mbs((LPCWSTR)m_comboBoxAudioEndpoint.GetItemDataPtr(m_comboBoxAudioEndpoint.GetCurSel()));
         config.encoding = (audio_manager::encoding_t)m_comboEncoding.GetItemData(m_comboEncoding.GetCurSel());
+        CString testToneText;
+        m_editTestToneText.GetWindowTextW(testToneText);
+        config.test_tone.text = wchars_to_utf8(testToneText.GetString());
         try {
             m_network_manager->start_server(host, port, config);
         }
@@ -217,23 +250,58 @@ void CServerTabPanel::OnBnClickedStartServer()
         theApp.WriteProfileStringW(L"Network", L"port", port_str);
         theApp.WriteProfileStringW(L"Capture", L"endpoint", mbs_to_wchars(config.endpoint_id).c_str());
         theApp.WriteProfileInt(L"Capture", L"encoding", (int)config.encoding);
+        theApp.WriteProfileStringW(L"Capture", L"testToneText", testToneText);
         theApp.WriteProfileInt(L"App", L"Running", true);
         m_bStarted = true;
     }
     else {
-        // stop
-        m_buttonServer.EnableWindow(false);
-        m_network_manager->stop_server();
-
-        EnableInputControls(true);
-        m_buttonServer.EnableWindow(true);
-        CString s;
-        (void)s.LoadStringW(IDS_START_SERVER);
-        m_buttonServer.SetWindowTextW(s);
-        m_buttonServer.SetFocus();
-        theApp.WriteProfileInt(L"App", L"Running", false);
-        m_bStarted = false;
+        StopServer();
     }
+}
+
+void CServerTabPanel::StopServer()
+{
+    m_buttonServer.EnableWindow(false);
+    m_network_manager->stop_server();
+
+    EnableInputControls(true);
+    m_buttonServer.EnableWindow(true);
+    CString s;
+    (void)s.LoadStringW(IDS_START_SERVER);
+    m_buttonServer.SetWindowTextW(s);
+    m_buttonServer.SetFocus();
+    theApp.WriteProfileInt(L"App", L"Running", false);
+    m_bStarted = false;
+}
+
+LRESULT CServerTabPanel::OnCaptureError(WPARAM wParam, LPARAM lParam)
+{
+    std::unique_ptr<CString> pDetail((CString*)lParam);
+    if (IsRunning()) {
+        StopServer();
+    }
+    CString message;
+    (void)message.LoadStringW(IDS_CAPTURE_FAILED);
+    message += L"\n\n";
+    message += *pDetail;
+    AfxMessageBox(message, MB_OK | MB_ICONSTOP);
+    return 0;
+}
+
+bool CServerTabPanel::IsTestToneSelected()
+{
+    int nIndex = m_comboBoxAudioEndpoint.GetCurSel();
+    if (nIndex == CB_ERR) {
+        return false;
+    }
+    return CString((LPCWSTR)m_comboBoxAudioEndpoint.GetItemDataPtr(nIndex)) == mbs_to_wchars(audio_manager::test_tone_endpoint).c_str();
+}
+
+void CServerTabPanel::OnCbnSelchangeComboAudioEndpoint()
+{
+    const bool bTestTone = IsTestToneSelected();
+    m_editTestToneText.EnableWindow(bTestTone && !IsRunning());
+    m_staticTestToneText.EnableWindow(bTestTone);
 }
 
 void CServerTabPanel::EnableInputControls(bool bEnable)
@@ -244,6 +312,7 @@ void CServerTabPanel::EnableInputControls(bool bEnable)
     m_buttonReset.EnableWindow(bEnable);
     m_comboEncoding.EnableWindow(bEnable);
     m_buttonSoundPanel.EnableWindow(bEnable);
+    m_editTestToneText.EnableWindow(bEnable && IsTestToneSelected());
 }
 
 

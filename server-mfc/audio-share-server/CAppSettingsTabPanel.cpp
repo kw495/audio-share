@@ -99,6 +99,7 @@ BOOL CAppSettingsTabPanel::OnInitDialog()
         { L"default", ((void)s.LoadStringW(IDS_DEFAULT), s.GetString()) },
         { L"en-US", ((void)s.LoadStringW(IDS_ENGLISH), s.GetString())},
         { L"zh-CN", ((void)s.LoadStringW(IDS_SIMPLIFIED_CHINESE), s.GetString())},
+        { L"ja-JP", ((void)s.LoadStringW(IDS_JAPANESE), s.GetString())},
     };
     for (auto&& lang : array) {
         auto nIndex = m_comboLanguage.AddString(lang.second.c_str());

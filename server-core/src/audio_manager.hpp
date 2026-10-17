@@ -25,12 +25,14 @@
 #include "win32/audio_manager_impl.hpp"
 #endif
 
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <thread>
 
 #include "client.pb.h"
 #include "silence_gate.hpp"
+#include "test_tone.hpp"
 
 class network_manager;
 
@@ -83,7 +85,16 @@ public:
         int sample_rate = 0;
         int opus_bitrate = 32000; // bits per second, only used with encoding_opus
         silence_gate::config gate; // skip sending while the captured audio is silent
+        morse_tone::config test_tone; // used when endpoint_id is test_tone_endpoint
     };
+
+    // Pseudo endpoint that sends a synthesized Morse signal instead of
+    // capturing; works without any sound device.
+    static constexpr const char* test_tone_endpoint = "test-tone";
+
+    // Called on the capture thread when capturing fails. If unset, the process
+    // exits (the command line behaviour).
+    std::function<void(const std::string&)> on_capture_error;
 
     audio_manager();
     ~audio_manager();
@@ -91,6 +102,7 @@ public:
     void start_loopback_recording(std::shared_ptr<network_manager> network_manager, const capture_config& config);
     void stop();
     void do_loopback_recording(std::shared_ptr<network_manager> network_manager, const capture_config& config);
+    void do_test_tone(std::shared_ptr<network_manager> network_manager, const capture_config& config);
 
     std::string get_format_binary();
     std::shared_ptr<AudioFormat> get_format() const { return _format; }
