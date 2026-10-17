@@ -25,9 +25,6 @@ import android.os.Build
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -101,10 +98,6 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
     private val scope: CoroutineScope = MainScope()
     private val retryScope: CoroutineScope = MainScope()
 
-    companion object {
-        var message by mutableStateOf("")
-    }
-
     override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
         return future {
             Log.d(tag, "handleSetPlayWhenReady playWhenReady=$playWhenReady")
@@ -139,6 +132,8 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                     .setPlayWhenReady(true, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
                     .build()
 
+                PlaybackStatus.resetSession("$host:$port")
+                PlaybackStatus.state = PlaybackStatus.State.CONNECTING
                 netClient.start(
                     host = host,
                     port = port,
@@ -150,7 +145,8 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                     .build()
                 netClient.stop()
                 retryScope.coroutineContext.cancelChildren()
-                message = context.getString(R.string.label_paused)
+                PlaybackStatus.state = PlaybackStatus.State.STOPPED
+                PlaybackStatus.log(context.getString(R.string.label_paused))
             }
         }
     }
@@ -163,7 +159,8 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
             .build()
         netClient.stop()
         retryScope.coroutineContext.cancelChildren()
-        message = context.getString(R.string.label_stopped)
+        PlaybackStatus.state = PlaybackStatus.State.STOPPED
+        PlaybackStatus.log(context.getString(R.string.label_stopped))
         return immediateVoidFuture()
     }
 
@@ -209,6 +206,36 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
         // Collects Opus output that the codec finishes after decode() returned.
         private var drainJob: Job? = null
 
+        // Receive statistics, published to PlaybackStatus once a second.
+        private var totalBytes = 0L
+        private var totalPackets = 0L
+        private var lastPacketAtMillis = 0L
+        private var statsJob: Job? = null
+
+        private fun startStats() {
+            statsJob?.cancel()
+            statsJob = scope.launch {
+                var lastBytes = totalBytes
+                var lastPackets = totalPackets
+                while (true) {
+                    delay(1.seconds)
+                    PlaybackStatus.stats = PlaybackStatus.Stats(
+                        bytesPerSecond = totalBytes - lastBytes,
+                        packetsPerSecond = totalPackets - lastPackets,
+                        totalBytes = totalBytes,
+                        totalPackets = totalPackets,
+                        lastPacketAtMillis = lastPacketAtMillis,
+                    )
+                    lastBytes = totalBytes
+                    lastPackets = totalPackets
+                    val receiving = lastPacketAtMillis != 0L &&
+                        System.currentTimeMillis() - lastPacketAtMillis < 1000
+                    PlaybackStatus.state =
+                        if (receiving) PlaybackStatus.State.RECEIVING else PlaybackStatus.State.SILENT
+                }
+            }
+        }
+
         private fun startPlaybackAfterPrefill() {
             prefillTimeoutJob?.cancel()
             prefillTimeoutJob = null
@@ -219,8 +246,7 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
         }
 
         override suspend fun log(message: String) {
-//            Log.d(tag, "logMessage: $message")
-            AudioPlayer.message = message
+            PlaybackStatus.log(message)
         }
 
         override suspend fun onReceiveAudioFormat(format: Client.AudioFormat) {
@@ -291,6 +317,18 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                     AudioAttributes.USAGE_MEDIA to AudioAttributes.CONTENT_TYPE_MUSIC
             }
             Log.i(tag, "audio usage: $usageValue")
+
+            val status = PlaybackStatus.Format(
+                encoding = format.encoding,
+                channels = format.channels,
+                sampleRate = format.sampleRate,
+                bitrate = format.bitrate,
+                usage = usageValue,
+            )
+            PlaybackStatus.format = status
+            PlaybackStatus.log(
+                context.getString(R.string.label_format_detail, PlaybackStatus.describe(context, status))
+            )
 
             // A reconnect builds a new track (possibly with a different usage); drop the old one.
             _loudnessEnhancer?.release()
@@ -371,15 +409,26 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                 .build()
             invalidateState()
             Log.d(tag, "onPlaybackStarted")
-            message = context.getString(R.string.label_started)
+            PlaybackStatus.state = PlaybackStatus.State.SILENT
+            PlaybackStatus.log(context.getString(R.string.label_started))
+            startStats()
         }
 
         override suspend fun onReceiveAudioData(audioData: ByteBuffer) {
 //            Log.d(tag, "${audioData.remaining()}")
             val now = TimeSource.Monotonic.markNow()
             val last = lastDataMark
+            totalBytes += audioData.remaining()
+            totalPackets += 1
+            lastPacketAtMillis = System.currentTimeMillis()
+            if (last == null) {
+                PlaybackStatus.log(context.getString(R.string.label_first_audio))
+            }
             if (!prebuffering && last != null && now - last > gapThreshold) {
                 Log.d(tag, "audio resumed after ${now - last}, prebuffering")
+                PlaybackStatus.log(
+                    context.getString(R.string.label_resumed_after, (now - last).inWholeMilliseconds / 1000.0)
+                )
                 audioTrack.pause()
                 audioTrack.flush()
                 opusDecoder?.flush()
@@ -431,12 +480,10 @@ class AudioPlayer(val context: Context) : SimpleBasePlayer(Looper.getMainLooper(
                 netClient.stop()
 
                 val reason = message ?: cause?.stackTraceToString()
-                var wait = 3
-                while (wait > 0) {
-                    log("$reason, ${context.getString(R.string.label_retry).format(wait)}")
-                    delay(1.seconds)
-                    --wait
-                }
+                PlaybackStatus.state = PlaybackStatus.State.RETRYING
+                PlaybackStatus.log("$reason, ${context.getString(R.string.label_retry).format(3)}")
+                delay(3.seconds)
+                PlaybackStatus.state = PlaybackStatus.State.CONNECTING
 
                 _state = state.buildUpon()
                     .setPlayerError(null)

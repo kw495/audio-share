@@ -22,17 +22,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +49,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
 import io.github.mkckr0.audio_share_app.R
-import io.github.mkckr0.audio_share_app.service.AudioPlayer
 import io.github.mkckr0.audio_share_app.ui.MainActivity
 import io.github.mkckr0.audio_share_app.ui.screen.HomeScreenViewModel.UiState
 import kotlinx.coroutines.launch
@@ -81,11 +76,10 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
                 modifier = Modifier
                     .padding(16.dp)
                     .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Row(
-                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(
                         8.dp,
                         Alignment.CenterHorizontally
@@ -147,23 +141,8 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
                     )
                 }
 
-                Row(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedCard(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        SelectionContainer {
-                            Text(
-                                text = AudioPlayer.message,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                                    .verticalScroll(rememberScrollState())
-                            )
-                        }
-                    }
-                }
+                StatusCard()
+                LogCard(modifier = Modifier.weight(1f))
             }
 
             LifecycleStartEffect(true) {

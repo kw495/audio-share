@@ -51,9 +51,9 @@
     <string name="label_tap_notification_1">この通知をタップするとダウンロードを開始します</string>
     <string name="label_tap_notification_2">アップデートがあります。通知をタップしてダウンロードしてください</string>
     <!-- Audio Player -->
-    <string name="label_started">再生中</string>
-    <string name="label_stopped">停止</string>
-    <string name="label_paused">一時停止</string>
+    <string name="label_started">再生を開始しました</string>
+    <string name="label_stopped">停止しました</string>
+    <string name="label_paused">一時停止しました</string>
     <string name="label_retry">%d 秒後に再試行します</string>
     <string name="label_timeout">接続がタイムアウトしました</string>
     <string name="label_unresolved_address">アドレスを解決できません</string>
@@ -64,4 +64,28 @@
     <!-- Dialogs -->
     <string name="label_cancel">キャンセル</string>
     <string name="label_apply">適用</string>
+    <!-- Status and Log -->
+    <string name="label_format_detail">受信形式：%1$s</string>
+    <string name="label_first_audio">音声の受信を開始しました</string>
+    <string name="label_resumed_after">%1$.1f 秒の無音のあと受信を再開しました</string>
+    <string name="label_unsupported_format">未対応の形式</string>
+    <string name="label_mono">モノラル</string>
+    <string name="label_stereo">ステレオ</string>
+    <string name="label_channels_n">%1$d チャンネル</string>
+    <string name="label_status">状態</string>
+    <string name="label_state_stopped">停止中</string>
+    <string name="label_state_connecting">接続中</string>
+    <string name="label_state_silent">接続済み（無音）</string>
+    <string name="label_state_receiving">受信中</string>
+    <string name="label_state_retrying">再接続待ち</string>
+    <string name="label_server">サーバー</string>
+    <string name="label_format">受信形式</string>
+    <string name="label_receive_rate">受信速度</string>
+    <string name="label_total_received">受信合計</string>
+    <string name="label_last_packet">最終受信</string>
+    <string name="label_packets_per_second">%1$d パケット/秒</string>
+    <string name="label_packets">%1$d パケット</string>
+    <string name="label_seconds_ago">%1$.1f 秒前</string>
+    <string name="label_log">ログ</string>
+    <string name="label_clear">クリア</string>
 </resources>

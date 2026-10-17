@@ -64,4 +64,28 @@
     <!-- Dialogs -->
     <string name="label_cancel">Cancel</string>
     <string name="label_apply">Apply</string>
+    <!-- Status and Log -->
+    <string name="label_format_detail">Format: %1$s</string>
+    <string name="label_first_audio">Receiving audio</string>
+    <string name="label_resumed_after">Audio resumed after %1$.1f s of silence</string>
+    <string name="label_unsupported_format">Unsupported format</string>
+    <string name="label_mono">Mono</string>
+    <string name="label_stereo">Stereo</string>
+    <string name="label_channels_n">%1$d channels</string>
+    <string name="label_status">Status</string>
+    <string name="label_state_stopped">Stopped</string>
+    <string name="label_state_connecting">Connecting</string>
+    <string name="label_state_silent">Connected (silent)</string>
+    <string name="label_state_receiving">Receiving</string>
+    <string name="label_state_retrying">Waiting to reconnect</string>
+    <string name="label_server">Server</string>
+    <string name="label_format">Format</string>
+    <string name="label_receive_rate">Rate</string>
+    <string name="label_total_received">Total</string>
+    <string name="label_last_packet">Last packet</string>
+    <string name="label_packets_per_second">%1$d pkt/s</string>
+    <string name="label_packets">%1$d packets</string>
+    <string name="label_seconds_ago">%1$.1f s ago</string>
+    <string name="label_log">Log</string>
+    <string name="label_clear">Clear</string>
 </resources>
