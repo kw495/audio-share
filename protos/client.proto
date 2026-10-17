@@ -33,4 +33,5 @@ message AudioFormat
 	Encoding encoding = 1;
 	int32 channels = 2;
 	int32 sample_rate = 3;
+	int32 bitrate = 4;          // bits per second of the audio sent (informational)
 }

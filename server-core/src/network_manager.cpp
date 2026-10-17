@@ -424,16 +424,17 @@ audio_manager::AudioFormat network_manager::wire_format(const audio_manager::Aud
         return out;
     }
 
-    // Only mono or the capture layout can be produced (see pcm_converter).
-    int channels = config.channels == 1 ? 1 : capture.channels();
+    // Mono, stereo or the capture layout can be produced (see pcm_converter).
+    int channels = pcm_converter::resolve_channels(capture.channels(), config.channels);
 
     if (config.encoding == encoding_t::encoding_opus) {
         if (channels > 2) {
-            channels = 1; // multichannel Opus is not supported, fold down to mono
+            channels = 2; // multichannel Opus is not supported, downmix to stereo
         }
         out.set_encoding(AudioFormat::ENCODING_OPUS);
         out.set_channels(channels);
         out.set_sample_rate(opus_packer::sample_rate);
+        out.set_bitrate(config.opus_bitrate);
         return out;
     }
 
@@ -459,6 +460,8 @@ audio_manager::AudioFormat network_manager::wire_format(const audio_manager::Aud
     }
     out.set_channels(channels);
     out.set_sample_rate(config.sample_rate > 0 ? config.sample_rate : capture.sample_rate());
+    const int bytes_per_sample = pcm_converter::bytes_per_sample(to_sample_format(out.encoding()));
+    out.set_bitrate((int32_t)(std::min)((int64_t)out.sample_rate() * channels * bytes_per_sample * 8, (int64_t)INT32_MAX));
     return out;
 }
 
@@ -474,8 +477,8 @@ void network_manager::setup_pipeline()
     if (capture_sample_format == silence_gate::sample_format::unknown) {
         spdlog::error("unsupported capture encoding {}, nothing will be sent", (int)capture.encoding());
     }
-    if (_capture_config.channels > 1 && _capture_config.channels != capture.channels()) {
-        spdlog::warn("only mono or the capture layout ({} channels) can be sent, ignoring --channels={}",
+    if (_capture_config.channels > 2 && _capture_config.channels != capture.channels()) {
+        spdlog::warn("only mono, stereo or the capture layout ({} channels) can be sent, ignoring --channels={}",
             capture.channels(), _capture_config.channels);
     }
 

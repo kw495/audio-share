@@ -29,6 +29,8 @@
 #define IDS_ENCODING_S24                146
 #define IDS_ENCODING_S32                147
 #define IDS_ENCODING_OPUS               148
+#define IDS_CHANNELS_MONO               149
+#define IDS_CHANNELS_STEREO             150
 #define IDR_MAINFRAME                   128
 #define IDR_MENU_SYSTEM_TRAY            129
 #define IDB_BITMAP_APP                  130
@@ -43,6 +45,8 @@
 #define IDC_BUTTON_SOUND_PANEL          1106
 #define IDC_EDIT_TEST_TONE_TEXT         1107
 #define IDC_STATIC_TEST_TONE_TEXT       1108
+#define IDC_COMBO_CHANNELS              1109
+#define IDC_COMBO_QUALITY               1110
 #define IDC_CHECK_AUTORUN               1200
 #define IDC_BUTTON_REPPAIR_FIREWALL     1201
 #define IDC_RADIO_NONE                  1202

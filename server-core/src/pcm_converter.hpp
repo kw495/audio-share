@@ -16,7 +16,7 @@
 #define PCM_CONVERTER_HPP
 
 // Turns captured PCM into the audio that is sent: any supported sample format
-// is decoded to float, optionally mixed down to mono, and resampled.
+// is decoded to float, optionally mixed to mono or stereo, and resampled.
 //
 // Conversion happens here rather than in the capture API because WASAPI
 // loopback only delivers the device mix format; asking it for another channel
@@ -55,12 +55,23 @@ public:
         }
     }
 
-    // `out_channels` must be 1 or `in_channels`; anything else keeps `in_channels`.
+    // Channel count produced for a requested `out_channels`: 1 (mono), 2 (stereo,
+    // from mono by duplication or from more channels by downmix), anything else
+    // keeps the input layout.
+    static int resolve_channels(int in_channels, int out_channels)
+    {
+        if (out_channels == 1 || out_channels == 2) {
+            return out_channels;
+        }
+        return (std::max)(in_channels, 1);
+    }
+
     void configure(sample_format in_fmt, int in_channels, int in_rate, int out_channels, int out_rate)
     {
         _in_fmt = in_fmt;
         _in_channels = (std::max)(in_channels, 1);
-        _out_channels = out_channels == 1 ? 1 : _in_channels;
+        _out_channels = resolve_channels(_in_channels, out_channels);
+        build_stereo_mix();
         _in_rate = (std::max)(in_rate, 1);
         _out_rate = out_rate > 0 ? out_rate : _in_rate;
         _bypass_resample = _in_rate == _out_rate;
@@ -105,6 +116,17 @@ public:
                     sum += known_silent ? 0.0f : read_sample(frame + c * bps);
                 }
                 _mixed[f] = sum / (float)_in_channels;
+            } else if (_out_channels == 2 && _in_channels != 2) {
+                float l = 0.0f, r = 0.0f;
+                if (!known_silent) {
+                    for (int c = 0; c < _in_channels; ++c) {
+                        const float v = read_sample(frame + c * bps);
+                        l += _mix_l[c] * v;
+                        r += _mix_r[c] * v;
+                    }
+                }
+                _mixed[f * 2] = l;
+                _mixed[f * 2 + 1] = r;
             } else {
                 for (int c = 0; c < _in_channels; ++c) {
                     _mixed[f * _out_channels + c] = known_silent ? 0.0f : read_sample(frame + c * bps);
@@ -188,6 +210,48 @@ private:
         }
     }
 
+    // Weights for producing stereo from a layout that is not stereo. Mono is
+    // copied to both sides. 5.1 and 7.1 (WAVEFORMATEXTENSIBLE order FL FR FC
+    // LFE BL BR [SL SR]) use the usual -3dB centre/surround downmix without LFE;
+    // other layouts take their first two channels. Each side is normalized so
+    // a full-scale input cannot clip.
+    void build_stereo_mix()
+    {
+        _mix_l.assign(_in_channels, 0.0f);
+        _mix_r.assign(_in_channels, 0.0f);
+        if (_out_channels != 2 || _in_channels == 2) {
+            return;
+        }
+        if (_in_channels == 1) {
+            _mix_l[0] = _mix_r[0] = 1.0f;
+            return;
+        }
+        constexpr float k = 0.7071f;
+        if (_in_channels == 6 || _in_channels == 8) {
+            _mix_l[0] = 1.0f;
+            _mix_r[1] = 1.0f;
+            _mix_l[2] = _mix_r[2] = k;
+            _mix_l[4] = k;
+            _mix_r[5] = k;
+            if (_in_channels == 8) {
+                _mix_l[6] = k;
+                _mix_r[7] = k;
+            }
+        } else {
+            _mix_l[0] = 1.0f;
+            _mix_r[1] = 1.0f;
+        }
+        float sum_l = 0.0f, sum_r = 0.0f;
+        for (int c = 0; c < _in_channels; ++c) {
+            sum_l += _mix_l[c];
+            sum_r += _mix_r[c];
+        }
+        for (int c = 0; c < _in_channels; ++c) {
+            _mix_l[c] /= sum_l;
+            _mix_r[c] /= sum_r;
+        }
+    }
+
     // Tabulates the filter at `_phases` + 1 fractional offsets; coefficients
     // in between are linearly interpolated. Each row is normalized to unity gain.
     void build_filter()
@@ -267,6 +331,7 @@ private:
     int _in_rate = 48000;
     int _out_rate = 48000;
     bool _bypass_resample = true;
+    std::vector<float> _mix_l, _mix_r; // stereo downmix/upmix weights per input channel
 
     static constexpr int _phases = 256;
     int _half = 0;

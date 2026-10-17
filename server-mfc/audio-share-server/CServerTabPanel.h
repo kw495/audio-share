@@ -34,6 +34,8 @@ protected:
 	afx_msg void OnBnClickedStartServer();
 	afx_msg void OnBnClickedButtonSoundPanel();
 	afx_msg void OnCbnSelchangeComboAudioEndpoint();
+	afx_msg void OnCbnSelchangeComboEncoding();
+	void FillQualityList();
 	afx_msg LRESULT OnCaptureError(WPARAM wParam, LPARAM lParam);
 	void EnableInputControls(bool bEnable = true);
 	bool IsTestToneSelected();
@@ -49,6 +51,8 @@ public:
 	CButton m_buttonReset;
 	CComboBox m_comboEncoding;
 	CButton m_buttonSoundPanel;
+	CComboBox m_comboChannels;
+	CComboBox m_comboQuality; // Opus bitrate, or sample rate for PCM
 	CEdit m_editTestToneText;
 	CStatic m_staticTestToneText;
 	int m_nDeviceCount; // real sound devices in the endpoint list

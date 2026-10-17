@@ -44,6 +44,8 @@ void CServerTabPanel::DoDataExchange(CDataExchange* pDX)
     DDX_Control(pDX, IDC_BUTTON_RESET, m_buttonReset);
     DDX_Control(pDX, IDC_COMBO_ENCODING, m_comboEncoding);
     DDX_Control(pDX, IDC_BUTTON_SOUND_PANEL, m_buttonSoundPanel);
+    DDX_Control(pDX, IDC_COMBO_CHANNELS, m_comboChannels);
+    DDX_Control(pDX, IDC_COMBO_QUALITY, m_comboQuality);
     DDX_Control(pDX, IDC_EDIT_TEST_TONE_TEXT, m_editTestToneText);
     DDX_Control(pDX, IDC_STATIC_TEST_TONE_TEXT, m_staticTestToneText);
 }
@@ -54,6 +56,7 @@ BEGIN_MESSAGE_MAP(CServerTabPanel, CTabPanel)
     ON_BN_CLICKED(IDC_BUTTON_RESET, &CServerTabPanel::OnBnClickedButtonReset)
     ON_BN_CLICKED(IDC_BUTTON_SOUND_PANEL, &CServerTabPanel::OnBnClickedButtonSoundPanel)
     ON_CBN_SELCHANGE(IDC_COMBO_AUDIO_ENDPOINT, &CServerTabPanel::OnCbnSelchangeComboAudioEndpoint)
+    ON_CBN_SELCHANGE(IDC_COMBO_ENCODING, &CServerTabPanel::OnCbnSelchangeComboEncoding)
     ON_MESSAGE(WM_APP_CAPTURE_ERROR, &CServerTabPanel::OnCaptureError)
 END_MESSAGE_MAP()
 
@@ -190,6 +193,85 @@ void CServerTabPanel::OnBnClickedButtonReset()
             m_comboEncoding.SetCurSel(0);
         }
     }
+
+    // channel list
+    {
+        m_comboChannels.ResetContent();
+        std::vector<std::pair<int, UINT>> array = {
+            { 0, IDS_DEFAULT },
+            { 1, IDS_CHANNELS_MONO },
+            { 2, IDS_CHANNELS_STEREO },
+        };
+        for (auto&& [channels, nID] : array) {
+            CString name;
+            (void)name.LoadStringW(nID);
+            auto nIndex = m_comboChannels.AddString(name);
+            m_comboChannels.SetItemData(nIndex, channels);
+        }
+        auto configChannels = theApp.GetProfileIntW(L"Capture", L"channels", 0);
+        m_comboChannels.SetCurSel(0);
+        for (int nIndex = 0; nIndex < m_comboChannels.GetCount(); ++nIndex) {
+            if (configChannels == (int)m_comboChannels.GetItemData(nIndex)) {
+                m_comboChannels.SetCurSel(nIndex);
+                break;
+            }
+        }
+    }
+
+    FillQualityList();
+}
+
+// The quality list depends on the encoding: the bitrate for Opus, the sample
+// rate for PCM. Both are remembered separately.
+void CServerTabPanel::FillQualityList()
+{
+    using encoding_t = audio_manager::encoding_t;
+    const bool bOpus = m_comboEncoding.GetCurSel() != CB_ERR
+        && (encoding_t)m_comboEncoding.GetItemData(m_comboEncoding.GetCurSel()) == encoding_t::encoding_opus;
+
+    m_comboQuality.ResetContent();
+    int nSelect = 0;
+    if (bOpus) {
+        const int configBitrate = theApp.GetProfileIntW(L"Capture", L"opusBitrate", 32000);
+        int nDefault = 0;
+        nSelect = -1;
+        for (int kbps : { 16, 24, 32, 48, 64, 96, 128 }) {
+            CString name;
+            name.Format(L"%d kbps", kbps);
+            auto nIndex = m_comboQuality.AddString(name);
+            m_comboQuality.SetItemData(nIndex, kbps * 1000);
+            if (kbps == 32) {
+                nDefault = nIndex;
+            }
+            if (kbps * 1000 == configBitrate) {
+                nSelect = nIndex;
+            }
+        }
+        if (nSelect < 0) {
+            nSelect = nDefault;
+        }
+    } else {
+        const int configRate = theApp.GetProfileIntW(L"Capture", L"sampleRate", 0);
+        CString defaultString;
+        (void)defaultString.LoadStringW(IDS_DEFAULT);
+        auto nDefault = m_comboQuality.AddString(defaultString);
+        m_comboQuality.SetItemData(nDefault, 0);
+        for (int rate : { 16000, 22050, 24000, 32000, 44100, 48000 }) {
+            CString name;
+            name.Format(L"%d Hz", rate);
+            auto nIndex = m_comboQuality.AddString(name);
+            m_comboQuality.SetItemData(nIndex, rate);
+            if (rate == configRate) {
+                nSelect = nIndex;
+            }
+        }
+    }
+    m_comboQuality.SetCurSel(nSelect);
+}
+
+void CServerTabPanel::OnCbnSelchangeComboEncoding()
+{
+    FillQualityList();
 }
 
 void CServerTabPanel::OnBnClickedStartServer()
@@ -224,6 +306,13 @@ void CServerTabPanel::OnBnClickedStartServer()
         audio_manager::capture_config config;
         config.endpoint_id = wchars_to_mbs((LPCWSTR)m_comboBoxAudioEndpoint.GetItemDataPtr(m_comboBoxAudioEndpoint.GetCurSel()));
         config.encoding = (audio_manager::encoding_t)m_comboEncoding.GetItemData(m_comboEncoding.GetCurSel());
+        config.channels = (int)m_comboChannels.GetItemData(m_comboChannels.GetCurSel());
+        const int nQuality = (int)m_comboQuality.GetItemData(m_comboQuality.GetCurSel());
+        if (config.encoding == audio_manager::encoding_t::encoding_opus) {
+            config.opus_bitrate = nQuality;
+        } else {
+            config.sample_rate = nQuality;
+        }
         CString testToneText;
         m_editTestToneText.GetWindowTextW(testToneText);
         config.test_tone.text = wchars_to_utf8(testToneText.GetString());
@@ -251,6 +340,12 @@ void CServerTabPanel::OnBnClickedStartServer()
         theApp.WriteProfileStringW(L"Capture", L"endpoint", mbs_to_wchars(config.endpoint_id).c_str());
         theApp.WriteProfileInt(L"Capture", L"encoding", (int)config.encoding);
         theApp.WriteProfileStringW(L"Capture", L"testToneText", testToneText);
+        theApp.WriteProfileInt(L"Capture", L"channels", config.channels);
+        if (config.encoding == audio_manager::encoding_t::encoding_opus) {
+            theApp.WriteProfileInt(L"Capture", L"opusBitrate", config.opus_bitrate);
+        } else {
+            theApp.WriteProfileInt(L"Capture", L"sampleRate", config.sample_rate);
+        }
         theApp.WriteProfileInt(L"App", L"Running", true);
         m_bStarted = true;
     }
@@ -311,6 +406,8 @@ void CServerTabPanel::EnableInputControls(bool bEnable)
     m_comboBoxAudioEndpoint.EnableWindow(bEnable);
     m_buttonReset.EnableWindow(bEnable);
     m_comboEncoding.EnableWindow(bEnable);
+    m_comboChannels.EnableWindow(bEnable);
+    m_comboQuality.EnableWindow(bEnable);
     m_buttonSoundPanel.EnableWindow(bEnable);
     m_editTestToneText.EnableWindow(bEnable && IsTestToneSelected());
 }

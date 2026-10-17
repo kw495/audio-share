@@ -18,6 +18,10 @@ comment,English (United States),"Chinese (Simplified, China)",Japanese (Japan)
 ,No Audio Endpoint,没有音频端点,音声デバイスがありません
 ,No Selected Audio Endpoint,没有选择音频端点,音声デバイスが選択されていません
 ,Morse Text,摩尔斯文本,モールス文字列
+,Channels,声道,チャンネル
+,Quality,音质,音質
+,Mono,单声道,モノラル
+,Stereo,立体声,ステレオ
 #,#,#,#
 ,Exit,退出,終了
 ,Hide,隐藏,隠す
