@@ -57,7 +57,7 @@ files). The following files were also changed but have no header to mark:
 Third-party software
 --------------------
 
-In addition to the libraries listed in README.md, this version uses:
+In addition to the upstream dependencies (listed in README.md), this version uses:
 
 - Opus (https://opus-codec.org/), BSD 3-Clause License.
   The Windows and Linux servers link libopus. Binary distributions must
