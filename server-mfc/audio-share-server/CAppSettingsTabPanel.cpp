@@ -273,7 +273,7 @@ void CAppSettingsTabPanel::CheckForUpdate(bool bPromptError)
                 INTERNET_FLAG_DONT_CACHE
             );
             auto httpFile = (CHttpFile*)session.OpenURL(
-                L"https://api.github.com/repos/mkckr0/audio-share/releases/latest",
+                L"https://api.github.com/repos/kw495/audio-share/releases/latest",
                 INTERNET_NO_CALLBACK,
                 INTERNET_FLAG_TRANSFER_BINARY | INTERNET_FLAG_RELOAD
             );

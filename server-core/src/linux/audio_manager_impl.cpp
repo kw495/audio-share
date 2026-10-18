@@ -1,5 +1,6 @@
 /*
    Copyright 2022-2024 mkckr0 <https://github.com/mkckr0>
+   Modified 2026 by kw495 (see NOTICE)
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

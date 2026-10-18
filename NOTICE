@@ -1,0 +1,67 @@
+Audio Share(modified)
+Copyright 2026 kw495
+
+This product is a modified version of Audio Share
+(https://github.com/mkckr0/audio-share), Copyright 2022-2024 mkckr0,
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It is not an official release of Audio Share and is not endorsed by its
+author. The Android app uses its own name ("Audio Share(modified)") and
+application ID (io.github.mkckr0.audio_share_app.modified) so that it can be
+told apart from, and installed next to, the official app.
+
+
+Changes
+-------
+
+All changes were made in 2026 by kw495, starting from Audio Share v0.3.4
+(commit 342751f). The full history is in the git log of this repository.
+
+- Server: stop sending while the captured audio is silent (silence gate)
+- Server: convert the captured audio itself (any PCM format, mono/stereo,
+  resampling), because WASAPI loopback only delivers the device mix format
+- Server: Opus compression (--encoding=opus, --opus-bitrate)
+- Server: a synthesized Morse code test tone that needs no sound device;
+  capture errors no longer terminate the Windows GUI
+- Windows GUI: channel and quality settings, test tone, Japanese translation
+- Protocol: AudioFormat.encoding ENCODING_OPUS and AudioFormat.bitrate
+- Android: choice of output stream (media, alarm, notification, ringtone),
+  Opus decoding, connection status/format/statistics/log on the home screen,
+  Japanese translation
+- Update checks and project links point to https://github.com/kw495/audio-share
+
+Source files that carry the Apache license header are marked with
+"Modified 2026 by kw495" (changed files) or "Copyright 2026 kw495" (new
+files). The following files were also changed but have no header to mark:
+
+  .github/workflows/build-server-core-linux.yml
+  .github/workflows/release.yml
+  android-app/app/src/main/res/values/strings.xml
+  android-app/app/src/main/res/values/values.xml
+  android-app/app/src/main/res/values-ja/strings.xml (new)
+  server-core/CMakeLists.txt
+  server-core/src/audio_manager.cpp
+  server-core/src/main.cpp
+  server-mfc/audio-share-server/AppMsg.h
+  server-mfc/audio-share-server/AudioShareServer.rc
+  server-mfc/audio-share-server/CAppSettingsTabPanel.cpp
+  server-mfc/audio-share-server/CServerTabPanel.cpp
+  server-mfc/audio-share-server/CServerTabPanel.h
+  server-mfc/audio-share-server/audio-share-server.vcxproj
+  server-mfc/audio-share-server/i18n/strings.csv
+  server-mfc/audio-share-server/resource.h
+  NOTICE (new)
+  README.md
+
+
+Third-party software
+--------------------
+
+In addition to the libraries listed in README.md, this version uses:
+
+- Opus (https://opus-codec.org/), BSD 3-Clause License.
+  The Windows and Linux servers link libopus. Binary distributions must
+  include the Opus license and copyright notice.
+
+Virtual audio drivers mentioned in the documentation (for example VB-CABLE)
+are not part of this repository and are not redistributed.

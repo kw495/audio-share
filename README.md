@@ -1,3 +1,46 @@
+# Audio Share(modified)
+
+[Audio Share](https://github.com/mkckr0/audio-share)（作者 mkckr0、Apache License 2.0）を改造したフォークです。公式版ではなく、本家の作者とは関係ありません。変更点と権利表示は [NOTICE](NOTICE) を参照してください。
+
+A modified fork of [Audio Share](https://github.com/mkckr0/audio-share) by mkckr0 (Apache License 2.0). Not an official release and not endorsed by the original author. See [NOTICE](NOTICE) for the changes and attributions.
+
+## このフォークで追加・変更した機能
+
+**サーバー（Windows / Linux）**
+- 無音の間は送らない（無音ゲート）。`--no-silence-gate`、`--gate-threshold`、`--gate-hold`、`--gate-preroll`
+- Opus 圧縮：`--encoding=opus --opus-bitrate=32000`（鳴っている間 約 4KB/s）
+- 送信チャンネル（`--channels=1` モノラル／`2` ステレオ）とサンプルレート（`--sample-rate`）をサーバー側で変換。WASAPI のループバックはデバイスのミックス形式しか出さないため、変換は自前で行う
+- テストトーン（モールス信号）：`--test-tone="CQ TEST"`。サウンドデバイスがなくても動作確認できる
+- Windows GUI：チャンネル・音質の設定、テストトーン、日本語表示。デバイスがなくてもアプリが終了しない
+
+**Android**
+- 出力先の選択：メディア／アラーム／通知／着信音（次の接続から反映）
+- Opus のデコード（OS 標準の MediaCodec）
+- ホーム画面に状態・受信形式・受信速度・ログを表示
+- 日本語表示
+- アプリ名「Audio Share(modified)」、ID `io.github.mkckr0.audio_share_app.modified`（公式版と並べてインストール可能）
+
+**プロトコル**：`AudioFormat` に `ENCODING_OPUS = 6` と `bitrate` を追加。このフォークのサーバーとアプリは組み合わせて使ってください（公式版のアプリは Opus を再生できません）。
+
+例：
+
+```
+as-cmd --bind=0.0.0.0 --encoding=opus --channels=1
+as-cmd --bind=0.0.0.0 --test-tone --encoding=opus
+```
+
+サーバーにサウンドデバイスがない場合（リモート接続専用の PC など）は、下記の「Extra Setups for "No Audio Endpoint"」にあるような仮想オーディオデバイスを別途導入してください。このリポジトリには含まれていません。
+
+## ビルドの補足
+
+- Windows の依存ライブラリ（vcpkg、トリプレット `x64-windows-static-md`）に `opus` が加わりました：`vcpkg install asio protobuf cxxopts "spdlog[wchar]" wil nlohmann-json opus`
+- Windows GUI のビルドでは、言語別のリソースを Python で生成します（`python.exe` が必要）
+- server-core のヘッダを変更したら、GUI は増分ではなく `msbuild /t:Rebuild` でビルドしてください（増分ビルドで古いレイアウトが残り、クラッシュした例があります）
+
+---
+
+以下は本家の README です（リンクやバッジは本家を指しています）。
+
 # Audio Share
 <p align="center">
     <img src="metadata/en-US/images/icon.png" width="20%" alt="metadata/en-US/images/icon.png">

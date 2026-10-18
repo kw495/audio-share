@@ -1,5 +1,6 @@
 /*
  *    Copyright 2022-2024 mkckr0 <https://github.com/mkckr0>
+ *    Modified 2026 by kw495 (see NOTICE)
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -237,7 +238,7 @@ fun SettingsScreen() {
         PreferenceCategory(context.getString(R.string.label_about)) {
             Preference(
                 icon = R.drawable.github_mark,
-                title = "Audio Share",
+                title = context.getString(R.string.app_name),
                 summary = stringResource(R.string.project_url),
                 intent = rememberIntent(
                     Intent.ACTION_VIEW,
@@ -259,7 +260,7 @@ fun SettingsScreen() {
                 summary = remember { "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})-${BuildConfig.BUILD_TYPE}" },
                 intent = rememberIntent(
                     Intent.ACTION_VIEW,
-                    "https://github.com/mkckr0/audio-share/releases/tag/v${BuildConfig.VERSION_NAME}"
+                    "https://github.com/kw495/audio-share/releases/tag/v${BuildConfig.VERSION_NAME}"
                 ),
             )
         }

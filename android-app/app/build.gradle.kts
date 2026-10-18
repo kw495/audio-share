@@ -1,5 +1,6 @@
 /*
  *    Copyright 2022-2024 mkckr0 <https://github.com/mkckr0>
+ *    Modified 2026 by kw495 (see NOTICE)
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -33,7 +34,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "io.github.mkckr0.audio_share_app"
+        applicationId = "io.github.mkckr0.audio_share_app.modified"
         minSdk = 23
         targetSdk = 35
         versionCode = 3004
