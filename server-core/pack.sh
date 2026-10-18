@@ -4,7 +4,7 @@ pushd out/install &>/dev/null || exit 1
 
 rm -rf audio-share-server-cmd
 cp -r "${platform}-Release" audio-share-server-cmd
-cp "${root_dir}/../LICENSE" audio-share-server-cmd
+cp "${root_dir}/../LICENSE" "${root_dir}/../NOTICE" "${root_dir}/../THIRD_PARTY_LICENSES" audio-share-server-cmd
 
 if [ "${platform}" = "linux" ]
 then

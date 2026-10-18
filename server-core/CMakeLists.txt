@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 project(audio-share
-	VERSION 0.3.4
+	VERSION 1.0.0
 	HOMEPAGE_URL "https://github.com/kw495/audio-share"
 )
 

@@ -44,7 +44,7 @@ GUI 版（AudioShareServer.exe）でも同じ設定ができます。
 
 ## ライセンス
 
-Apache License 2.0（[LICENSE](LICENSE)）。本家の著作権表示と、このフォークでの変更点は [NOTICE](NOTICE) を参照してください。
+Apache License 2.0（[LICENSE](LICENSE)）。本家の著作権表示と、このフォークでの変更点は [NOTICE](NOTICE)、配布物に含まれるライブラリのライセンス文は [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) を参照してください。
 
 使用ライブラリ：
 [Asio](https://github.com/chriskohlhoff/asio)（BSL-1.0）、

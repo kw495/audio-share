@@ -51,7 +51,11 @@ files). The following files were also changed but have no header to mark:
   server-mfc/audio-share-server/i18n/strings.csv
   server-mfc/audio-share-server/resource.h
   NOTICE (new)
+  THIRD_PARTY_LICENSES (new)
   README.md
+  VERSION
+  metadata/en-US/changelogs/1000000.txt (new)
+  server-core/pack.sh
 
 
 Third-party software
@@ -59,9 +63,12 @@ Third-party software
 
 In addition to the upstream dependencies (listed in README.md), this version uses:
 
-- Opus (https://opus-codec.org/), BSD 3-Clause License.
-  The Windows and Linux servers link libopus. Binary distributions must
-  include the Opus license and copyright notice.
+- Opus (https://opus-codec.org/), BSD 3-Clause License, linked into the
+  Windows and Linux servers.
+
+The licenses of all libraries included in the released binaries (server and
+Android app) are reproduced in THIRD_PARTY_LICENSES, which is shipped with
+every release together with LICENSE and this NOTICE.
 
 Virtual audio drivers mentioned in the documentation (for example VB-CABLE)
 are not part of this repository and are not redistributed.
