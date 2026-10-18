@@ -75,8 +75,10 @@ jobs:
       - run: vcpkg install asio protobuf spdlog[wchar] wil nlohmann-json opus
 
       # Rebuild: an incremental build once kept stale object layouts after a
-      # server-core header change
-      - run: msbuild /m /t:Rebuild /p:Configuration=Release,Platform=x64
+      # server-core header change.
+      # windows-latest ships Visual Studio 2026 (MSVC 14.5x, toolset v145) whose
+      # MFC is only installed for v145; the project itself targets v143 (VS 2022).
+      - run: msbuild /m /t:Rebuild /p:Configuration=Release,Platform=x64 /p:PlatformToolset=v145
 
       - name: Pack
         shell: bash
